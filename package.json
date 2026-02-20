@@ -1,0 +1,14 @@
+{
+  "name": "hacettepe-randevu-kontrol",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node src/check-randevu.js",
+    "check:debug": "HEADLESS=false node src/check-randevu.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.54.2"
+  }
+}

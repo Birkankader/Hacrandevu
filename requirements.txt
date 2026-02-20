@@ -1,0 +1,3 @@
+scrapling[fetchers]
+python-dotenv
+2captcha-python
