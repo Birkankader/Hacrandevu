@@ -3,6 +3,7 @@
 const API = '/api/patients';
 let ws = null;
 let patients = [];
+let currentPatientId = null;
 
 // ─── Hasta CRUD ───
 
@@ -32,7 +33,18 @@ function updateButtons() {
     document.getElementById('btnDelete').disabled = !hasSelection;
 }
 
-document.getElementById('patientSelect').addEventListener('change', updateButtons);
+document.getElementById('patientSelect').addEventListener('change', () => {
+    updateButtons();
+    const newId = document.getElementById('patientSelect').value;
+    if (newId !== currentPatientId) {
+        currentPatientId = newId;
+        if (newId) {
+            checkSessionStatus(parseInt(newId));
+        } else {
+            updateSessionIndicator(false);
+        }
+    }
+});
 
 // Modal
 
@@ -121,6 +133,42 @@ async function deleteSelectedPatient() {
     }
 }
 
+// ─── Session Management ───
+
+function updateSessionIndicator(active, loggedIn = false) {
+    const dot = document.getElementById('sessionDot');
+    const text = document.getElementById('sessionText');
+    if (!dot || !text) return;
+
+    if (active && loggedIn) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse';
+        text.textContent = 'Oturum aktif';
+        text.className = 'text-sm text-green-600 font-medium';
+    } else {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-gray-300';
+        text.textContent = 'Oturum yok';
+        text.className = 'text-sm text-gray-400';
+    }
+}
+
+async function checkSessionStatus(patientId) {
+    if (!patientId) {
+        updateSessionIndicator(false);
+        return;
+    }
+    try {
+        const res = await fetch(`/api/session/${patientId}`);
+        if (res.ok) {
+            const data = await res.json();
+            updateSessionIndicator(data.active, data.logged_in);
+        } else {
+            updateSessionIndicator(false);
+        }
+    } catch {
+        updateSessionIndicator(false);
+    }
+}
+
 // ─── WebSocket Arama ───
 
 const STEP_LABELS = {
@@ -142,8 +190,60 @@ const STEP_LABELS = {
 };
 
 let seenSteps = new Set();
+let searchInProgress = false;
 
-function startSearch() {
+function ensureWsConnection() {
+    return new Promise((resolve, reject) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            resolve(ws);
+            return;
+        }
+        // Eski WS varsa kapat
+        if (ws) {
+            try { ws.close(); } catch (e) {}
+            ws = null;
+        }
+
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${location.host}/ws/search`);
+
+        ws.onopen = () => resolve(ws);
+        ws.onerror = () => {
+            reject(new Error('WebSocket baglanti hatasi'));
+            ws = null;
+        };
+        ws.onclose = () => {
+            ws = null;
+            if (searchInProgress) {
+                finishSearch();
+            }
+        };
+        ws.onmessage = handleWsMessage;
+    });
+}
+
+function handleWsMessage(e) {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'status') {
+        addProgressStep(msg.step, msg.message);
+    } else if (msg.type === 'result') {
+        showResult(msg.data);
+        finishSearch();
+    } else if (msg.type === 'error') {
+        addProgressStep('error', msg.message);
+        finishSearch();
+    } else if (msg.type === 'session_status') {
+        const data = msg.data || {};
+        updateSessionIndicator(data.active, data.logged_in);
+    } else if (msg.type === 'pong') {
+        // keepalive response, ignore
+    } else if (msg.type === 'session_closed') {
+        updateSessionIndicator(false);
+    }
+}
+
+async function startSearch() {
     const patientId = document.getElementById('patientSelect').value;
     const searchText = document.getElementById('searchText').value.trim();
 
@@ -159,43 +259,23 @@ function startSearch() {
     document.getElementById('progressSpinner').classList.remove('hidden');
     document.getElementById('btnSearch').disabled = true;
     seenSteps = new Set();
+    searchInProgress = true;
 
-    // WebSocket baglantisi
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${proto}//${location.host}/ws/search`);
-
-    ws.onopen = () => {
-        const randevuType = document.getElementById('randevuType').value;
-        ws.send(JSON.stringify({
-            action: 'search',
-            patient_id: parseInt(patientId),
-            search_text: searchText,
-            randevu_type: randevuType,
-        }));
-    };
-
-    ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-
-        if (msg.type === 'status') {
-            addProgressStep(msg.step, msg.message);
-        } else if (msg.type === 'result') {
-            showResult(msg.data);
-            finishSearch();
-        } else if (msg.type === 'error') {
-            addProgressStep('error', msg.message);
-            finishSearch();
-        }
-    };
-
-    ws.onerror = () => {
-        addProgressStep('error', 'WebSocket baglanti hatasi.');
+    try {
+        await ensureWsConnection();
+    } catch (err) {
+        addProgressStep('error', err.message);
         finishSearch();
-    };
+        return;
+    }
 
-    ws.onclose = () => {
-        finishSearch();
-    };
+    const randevuType = document.getElementById('randevuType').value;
+    ws.send(JSON.stringify({
+        action: 'search',
+        patient_id: parseInt(patientId),
+        search_text: searchText,
+        randevu_type: randevuType,
+    }));
 }
 
 function addProgressStep(step, message) {
@@ -240,10 +320,8 @@ function cleanMessage(msg) {
 function finishSearch() {
     document.getElementById('progressSpinner').classList.add('hidden');
     document.getElementById('btnSearch').disabled = false;
-    if (ws) {
-        try { ws.close(); } catch (e) {}
-        ws = null;
-    }
+    searchInProgress = false;
+    // WS'yi kapatma — session persistence icin acik tut
 }
 
 function showResult(data) {
@@ -254,7 +332,8 @@ function showResult(data) {
     const totalAvailable = data.total_available || 0;
     const totalVisible = data.total_visible || 0;
     const alternatives = data.alternatives || [];
-    // Geriye uyumluluk: eski format desteği
+    const sessionReused = data.session_reused || false;
+    // Geriye uyumluluk: eski format destegi
     const slots = data.slots || { green: 0, red: 0, grey: 0, total: 0, details: [] };
 
     // Header
@@ -291,6 +370,11 @@ function showResult(data) {
         title.textContent = 'Durum Belirsiz';
         title.className = 'text-lg font-semibold text-gray-700';
         subtitle.textContent = 'Screenshot kontrol edin.';
+    }
+
+    // Session reuse badge
+    if (sessionReused) {
+        subtitle.textContent += ' (oturum yeniden kullanildi)';
     }
 
     // Alternatives list

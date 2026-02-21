@@ -2408,7 +2408,55 @@ class HacettepeBot:
 
         return result
 
-    def _flow(self, page) -> int:
+    # ─── Session persistence helpers ───
+
+    def _is_session_valid(self, page) -> bool:
+        """Login sayfasına dönmüş mü kontrol et. True = hâlâ login'li."""
+        try:
+            # reCAPTCHA iframe varsa login sayfasındayız
+            rc = page.locator('iframe[src*="recaptcha" i], iframe[title*="reCAPTCHA" i]')
+            if rc.count() > 0:
+                return False
+            # URL kontrol — login sayfası mı?
+            url = page.url
+            if "user=PUBLIC" in url and "public/main" in url.lower():
+                # Login sayfasındaki göstergeler
+                tc_field = page.locator('input[name*="tc" i], input[id*="tc" i]')
+                if tc_field.count() > 0:
+                    return False
+            return True
+        except Exception:
+            return False
+
+    def _reset_to_search_page(self, page) -> bool:
+        """Arama sonrası sayfayı target_url'e navigate edip login durumunu kontrol et.
+
+        Returns:
+            True — sayfa hazır, login hâlâ geçerli
+            False — session expire olmuş, yeniden login gerekiyor
+        """
+        cfg = self._cfg
+        try:
+            page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
+            time.sleep(2)
+            # Login sayfasına dönmüş mü?
+            if not self._is_session_valid(page):
+                return False
+            # Bilgi tamamlama dialogu tekrar gelmiş olabilir
+            handle_info_dialog(page, cfg["phone"], cfg["email"])
+            return True
+        except Exception:
+            return False
+
+    def _login_flow(self, page) -> bool:
+        """Google visit + TC/doğum + KVKK + captcha + submit + info dialog.
+
+        Returns:
+            True — login başarılı
+        Raises:
+            RecaptchaFailed — reCAPTCHA çözülemedi
+            RuntimeError — form alanları bulunamadı
+        """
         cfg = self._cfg
         # ── Google ziyareti: reCAPTCHA güven cookieleri oluştur ──
         try:
@@ -2494,7 +2542,7 @@ class HacettepeBot:
                 print("\n[SETUP] reCAPTCHA çözüldü! Profil güveni kaydedildi.")
             else:
                 print("\n[SETUP] reCAPTCHA çözülemedi. Tekrar deneyin.")
-            return 0 if rc_ok else 1
+            return rc_ok
 
         if not rc_ok:
             raise RecaptchaFailed("reCAPTCHA çözülemedi")
@@ -2621,10 +2669,22 @@ class HacettepeBot:
 
         # ── Bilgi tamamlama dialogu ──
         handle_info_dialog(page, cfg["phone"], cfg["email"])
+        return True
 
-        # ── Arama ile doktor/birim bulma ──
-        search_text = cfg["doctor"] or cfg["clinic"] or ""
-        randevu_type = cfg.get("randevu_type", "internet randevu")
+    def _search_flow(self, page, search_text=None, randevu_type=None) -> int:
+        """Arama + tip seçimi + randevu çıkarma + alternatif tarama.
+
+        Returns:
+            0 — müsait randevu bulundu
+            2 — uygun randevu yok
+            3 — belirsiz durum
+        """
+        cfg = self._cfg
+        if search_text is None:
+            search_text = cfg["doctor"] or cfg["clinic"] or ""
+        if randevu_type is None:
+            randevu_type = cfg.get("randevu_type", "internet randevu")
+
         all_results = []
         alternatives = []
 
@@ -2634,7 +2694,7 @@ class HacettepeBot:
             self._emit("search", f"[BILGI] Arama: {'başarılı' if selected else 'başarısız'}")
             time.sleep(random.uniform(2.0, 4.0))
 
-        # ── Randevu tipi seçimi (YENİ ADIM) ──
+        # ── Randevu tipi seçimi ──
         self._select_randevu_type(page, randevu_type)
         time.sleep(3)
 
@@ -2748,7 +2808,6 @@ class HacettepeBot:
 
         self._emit("result", f"[{ts}] {len(all_results)} alternatif tarandı. Toplam görünen: {total_visible}, müsait: {total_available}")
         if overall_status == "AVAILABLE":
-            avail_names = [r["name"] for r in all_results if r["status"] == "AVAILABLE"]
             avail_details = []
             for r in all_results:
                 if r["status"] == "AVAILABLE":
@@ -2760,6 +2819,41 @@ class HacettepeBot:
             return 2
         self._emit("result", f"[{ts}] Durum belirsiz → artifacts/last-check.png")
         return 3
+
+    def run_with_page(self, page, skip_login=False, search_text=None, randevu_type=None) -> int:
+        """SessionManager'dan gelen page ile çalışır.
+
+        Args:
+            page: Playwright page nesnesi
+            skip_login: True ise login atlanır (mevcut session kullanılır)
+            search_text: Arama metni (None ise cfg'den alınır)
+            randevu_type: Randevu tipi (None ise cfg'den alınır)
+
+        Returns:
+            0 — müsait randevu bulundu
+            1 — hata
+            2 — uygun randevu yok
+            3 — belirsiz
+        """
+        cfg = self._cfg
+        page.set_default_timeout(cfg["timeout_ms"])
+
+        if not skip_login:
+            self._login_flow(page)
+        else:
+            # Session mevcut — sayfayı arama konumuna getir
+            self._emit("init", "[BILGI] Mevcut oturum kullanılıyor, login atlanıyor...")
+            if not self._reset_to_search_page(page):
+                # Session expire olmuş, yeniden login gerekiyor
+                self._emit("init", "[BILGI] Oturum süresi dolmuş, yeniden giriş yapılıyor...")
+                self._login_flow(page)
+
+        return self._search_flow(page, search_text, randevu_type)
+
+    def _flow(self, page) -> int:
+        """Geriye uyumluluk — login + search tek çağrıda."""
+        self._login_flow(page)
+        return self._search_flow(page)
 
     def run(self) -> int:
         interval = self._cfg["check_interval_minutes"]
