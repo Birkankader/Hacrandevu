@@ -24,6 +24,7 @@ class BrowserSession:
     page: object     # Playwright Page instance
     patient_tc: str
     logged_in: bool = False
+    search_url: str = ""  # Login sonrası authenticated arama sayfası URL'i
     last_used: float = field(default_factory=time.time)
 
     def touch(self):

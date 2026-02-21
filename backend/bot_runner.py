@@ -3,6 +3,7 @@
 import io
 import sys
 import threading
+import time
 import os
 from queue import Queue, Empty
 
@@ -69,31 +70,38 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
             bs = sm.get_session(patient_tc)
             session_reused = bs is not None and bs.logged_in
 
+            search_args = dict(
+                search_text=config.get("doctor") or config.get("clinic") or "",
+                randevu_type=config.get("randevu_type", "internet randevu"),
+            )
+
             if session_reused:
-                # Mevcut session — login atla, başarısız olursa yeniden login
+                # Mevcut session — arama sayfasına dönüp yeniden ara
                 bs.touch()
                 try:
+                    # Login sonrası kayıtlı URL'e git (temiz arama sayfası)
+                    if bs.search_url:
+                        bs.page.goto(bs.search_url, wait_until="networkidle", timeout=30000)
+                        time.sleep(2)
                     exit_code = bot.run_with_page(
-                        bs.page,
-                        skip_login=True,
-                        search_text=config.get("doctor") or config.get("clinic") or "",
-                        randevu_type=config.get("randevu_type", "internet randevu"),
+                        bs.page, skip_login=True, **search_args,
                     )
+                    bs.search_url = bs.page.url
                     bs.touch()
+                except BotCancelled:
+                    raise
                 except Exception:
-                    # Session expire olmuş olabilir — yeniden login dene
+                    # Session expire olmuş — yeniden login dene
                     if status_callback:
                         status_callback("init", "[BILGI] Oturum geçersiz, yeniden giriş yapılıyor...")
                     sm.close_session(patient_tc)
                     bs = sm.create_session(patient_tc, config)
                     session_reused = False
                     exit_code = bot.run_with_page(
-                        bs.page,
-                        skip_login=False,
-                        search_text=config.get("doctor") or config.get("clinic") or "",
-                        randevu_type=config.get("randevu_type", "internet randevu"),
+                        bs.page, skip_login=False, **search_args,
                     )
                     bs.logged_in = True
+                    bs.search_url = bs.page.url
                     bs.touch()
             else:
                 # Yeni session oluştur
@@ -103,12 +111,10 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
                 bs = sm.create_session(patient_tc, config)
                 try:
                     exit_code = bot.run_with_page(
-                        bs.page,
-                        skip_login=False,
-                        search_text=config.get("doctor") or config.get("clinic") or "",
-                        randevu_type=config.get("randevu_type", "internet randevu"),
+                        bs.page, skip_login=False, **search_args,
                     )
                     bs.logged_in = True
+                    bs.search_url = bs.page.url
                     bs.touch()
                 except (RecaptchaFailed, Exception) as e:
                     sm.close_session(patient_tc)
