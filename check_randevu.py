@@ -2445,45 +2445,14 @@ class HacettepeBot:
 
     # ─── Session persistence helpers ───
 
-    def _is_login_page(self, page) -> bool:
-        """Sayfa login formu mu kontrol et."""
-        try:
-            tc_field = page.locator('input[name*="tc" i], input[id*="tc" i]')
-            if tc_field.count() > 0:
-                try:
-                    if tc_field.first.is_visible(timeout=2000):
-                        return True
-                except Exception:
-                    pass
-            rc = page.locator('iframe[src*="recaptcha" i], iframe[title*="reCAPTCHA" i]')
-            if rc.count() > 0:
-                return True
-            return False
-        except Exception:
-            return False
-
-    def _reset_to_search_page(self, page) -> bool:
-        """target_url'e gidip session hâlâ geçerli mi kontrol et.
-
-        Login'liyse site arama sayfasına yönlendirir.
-        Değilse login formuna düşer.
-
-        Returns:
-            True — session geçerli, arama sayfası yüklendi
-            False — session expire olmuş, login gerekiyor
-        """
-        cfg = self._cfg
-        try:
-            page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
-            time.sleep(3)
-            # Login sayfasına düştüyse session expire olmuş
-            if self._is_login_page(page):
-                return False
-            # Bilgi tamamlama dialogu tekrar gelmiş olabilir
-            handle_info_dialog(page, cfg["phone"], cfg["email"])
-            return True
-        except Exception:
-            return False
+    def _cancellable_sleep(self, seconds):
+        """İptal edilebilir sleep — 0.5s aralıkla cancel kontrol eder."""
+        elapsed = 0
+        while elapsed < seconds:
+            self._check_cancelled()
+            chunk = min(0.5, seconds - elapsed)
+            time.sleep(chunk)
+            elapsed += chunk
 
     def _login_flow(self, page) -> bool:
         """Google visit + TC/doğum + KVKK + captcha + submit + info dialog.
@@ -2652,7 +2621,7 @@ class HacettepeBot:
             except Exception:
                 pass
         self._emit("submit", f"[BILGI] Giriş butonu tıklandı: {submitted}")
-        time.sleep(6)  # Vaadin server round-trip — 2captcha sonrası daha uzun sürebilir
+        self._cancellable_sleep(6)  # Vaadin server round-trip
         self._screenshot(page, "debug-after-giris")
 
         # Vaadin notification kontrolü (sunucu hata mesajı)
@@ -2772,21 +2741,27 @@ class HacettepeBot:
             self._emit("search", f"[BILGI] Arama yapılıyor: {search_text}")
             selected, alternatives = self._search_and_select_first(page, search_text)
             self._emit("search", f"[BILGI] Arama: {'başarılı' if selected else 'başarısız'}")
-            time.sleep(random.uniform(2.0, 4.0))
+            if not selected:
+                self._emit("result", "[BILGI] Arama sonucu bulunamadı — uygun randevu yok.")
+                self.result = {
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "NOT_AVAILABLE",
+                    "total_available": 0, "total_visible": 0, "alternatives": [],
+                }
+                return 2
+            self._cancellable_sleep(random.uniform(2.0, 4.0))
 
         # ── Randevu tipi seçimi ──
         self._select_randevu_type(page, randevu_type)
-        time.sleep(3)
+        self._cancellable_sleep(3)
 
-        # Grid yüklenmesini bekle — Vaadin bazen yavaş olabiliyor
+        # Grid yüklenmesini bekle
         for wait_attempt in range(5):
+            self._check_cancelled()
             has_grid = page.evaluate("""() => {
-                // Body'de saat deseni var mı kontrol et
                 var bodyText = document.body ? document.body.innerText || '' : '';
                 var hasTime = /\\d{1,2}[:.:]\\d{2}/.test(bodyText);
-                // Vaadin grid var mı
                 var hasGrid = document.querySelectorAll('vaadin-grid').length > 0;
-                // Tablo var mı
                 var hasTable = document.querySelectorAll('table').length > 0;
                 return {hasTime: hasTime, hasGrid: hasGrid, hasTable: hasTable};
             }""")
@@ -2794,11 +2769,11 @@ class HacettepeBot:
                   f"grid={has_grid.get('hasGrid')}, table={has_grid.get('hasTable')}")
             if has_grid.get('hasTime') or has_grid.get('hasGrid') or has_grid.get('hasTable'):
                 break
-            time.sleep(2)
+            self._cancellable_sleep(2)
         else:
             print("  [GRID-WAIT] 10 saniye bekledik ama grid/saat bulunamadı.")
 
-        time.sleep(1)
+        self._cancellable_sleep(1)
         self._screenshot(page, "debug-after-type-select")
 
         # ── İlk seçimin randevu analizi ──
@@ -2826,12 +2801,12 @@ class HacettepeBot:
 
         self._screenshot(page, f"slot-{first_name[:20].replace(' ', '_')}")
 
-        # ── Birim/Doktor combo'daki TÜM seçenekleri tara ──
-        if search_text:
-            combo_options = self._get_unit_combo_options(page)
+        # ── Sadece arama sonuçlarındaki alternatifleri tara ──
+        if search_text and len(alternatives) > 1:
             scanned_names = {first_name.lower().strip()}
 
-            for opt in combo_options:
+            for opt in alternatives[1:]:
+                self._check_cancelled()
                 opt_lower = opt.lower().strip()
                 if opt_lower in scanned_names:
                     continue
@@ -2843,6 +2818,7 @@ class HacettepeBot:
                     self._emit("scanning", f"[UYARI] Seçilemedi: {opt}")
                     continue
 
+                self._cancellable_sleep(1)
                 opt_appt = self._extract_appointments(page)
                 opt_status = self._classify_appointments(page, opt_appt)
                 opt_result = {
@@ -2921,12 +2897,8 @@ class HacettepeBot:
         if not skip_login:
             self._login_flow(page)
         else:
-            # Session mevcut — sayfayı arama konumuna getir
+            # Session mevcut — direkt arama dene, başarısız olursa login'e düş
             self._emit("init", "[BILGI] Mevcut oturum kullanılıyor, login atlanıyor...")
-            if not self._reset_to_search_page(page):
-                # Session expire olmuş, yeniden login gerekiyor
-                self._emit("init", "[BILGI] Oturum süresi dolmuş, yeniden giriş yapılıyor...")
-                self._login_flow(page)
 
         return self._search_flow(page, search_text, randevu_type)
 

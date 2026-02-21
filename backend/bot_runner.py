@@ -70,15 +70,31 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
             session_reused = bs is not None and bs.logged_in
 
             if session_reused:
-                # Mevcut session — login atla
+                # Mevcut session — login atla, başarısız olursa yeniden login
                 bs.touch()
-                exit_code = bot.run_with_page(
-                    bs.page,
-                    skip_login=True,
-                    search_text=config.get("doctor") or config.get("clinic") or "",
-                    randevu_type=config.get("randevu_type", "internet randevu"),
-                )
-                bs.touch()
+                try:
+                    exit_code = bot.run_with_page(
+                        bs.page,
+                        skip_login=True,
+                        search_text=config.get("doctor") or config.get("clinic") or "",
+                        randevu_type=config.get("randevu_type", "internet randevu"),
+                    )
+                    bs.touch()
+                except Exception:
+                    # Session expire olmuş olabilir — yeniden login dene
+                    if status_callback:
+                        status_callback("init", "[BILGI] Oturum geçersiz, yeniden giriş yapılıyor...")
+                    sm.close_session(patient_tc)
+                    bs = sm.create_session(patient_tc, config)
+                    session_reused = False
+                    exit_code = bot.run_with_page(
+                        bs.page,
+                        skip_login=False,
+                        search_text=config.get("doctor") or config.get("clinic") or "",
+                        randevu_type=config.get("randevu_type", "internet randevu"),
+                    )
+                    bs.logged_in = True
+                    bs.touch()
             else:
                 # Yeni session oluştur
                 if bs and not bs.logged_in:
