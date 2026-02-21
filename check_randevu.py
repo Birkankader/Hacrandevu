@@ -22,6 +22,7 @@ import re
 import time
 import random
 import shutil
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -29,38 +30,47 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ─── Zorunlu değişken kontrolü ───
-REQUIRED_ENV = ["TC_KIMLIK_NO", "DOGUM_TARIHI"]
-for key in REQUIRED_ENV:
-    if not os.getenv(key):
-        print(f"[HATA] Eksik ortam değişkeni: {key}")
-        sys.exit(1)
-
 # ─── Yapılandırma ───
-SETUP_MODE = "--setup" in sys.argv
 SELECT_ALL_KEY = "Meta+a" if sys.platform == "darwin" else "Control+a"
 
-CFG = {
-    "target_url": os.getenv(
-        "TARGET_URL",
-        "https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-randevu/public/main?user=PUBLIC",
-    ),
-    "tc": os.getenv("TC_KIMLIK_NO"),
-    "birth_date": os.getenv("DOGUM_TARIHI"),
-    "department": os.getenv("DEPARTMENT_TEXT", ""),
-    "clinic": os.getenv("CLINIC_TEXT", ""),
-    "doctor": os.getenv("DOCTOR_TEXT", ""),
-    "headless": False if SETUP_MODE else os.getenv("HEADLESS", "true").lower() != "false",
-    "check_interval_minutes": int(os.getenv("CHECK_INTERVAL_MINUTES", "0")),
-    "timeout_ms": int(os.getenv("PAGE_TIMEOUT_MS", "45000")),
-    "save_screenshot": os.getenv("SAVE_SCREENSHOT", "true").lower() != "false",
-    "recaptcha_timeout_ms": int(os.getenv("RECAPTCHA_TIMEOUT_MS", "180000")),
-    "recaptcha_max_retries": int(os.getenv("RECAPTCHA_MAX_RETRIES", "3")),
-    "page_retries": int(os.getenv("PAGE_RETRIES", "5")),
-    "phone": os.getenv("PHONE", ""),
-    "email": os.getenv("EMAIL", ""),
-    "captcha_api_key": os.getenv("CAPTCHA_API_KEY", ""),
-}
+def _build_default_cfg():
+    """Ortam değişkenlerinden varsayılan yapılandırmayı oluştur."""
+    setup = "--setup" in sys.argv
+    return {
+        "target_url": os.getenv(
+            "TARGET_URL",
+            "https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-randevu/public/main?user=PUBLIC",
+        ),
+        "tc": os.getenv("TC_KIMLIK_NO", ""),
+        "birth_date": os.getenv("DOGUM_TARIHI", ""),
+        "department": os.getenv("DEPARTMENT_TEXT", ""),
+        "clinic": os.getenv("CLINIC_TEXT", ""),
+        "doctor": os.getenv("DOCTOR_TEXT", ""),
+        "headless": False if setup else os.getenv("HEADLESS", "true").lower() != "false",
+        "check_interval_minutes": int(os.getenv("CHECK_INTERVAL_MINUTES", "0")),
+        "timeout_ms": int(os.getenv("PAGE_TIMEOUT_MS", "45000")),
+        "save_screenshot": os.getenv("SAVE_SCREENSHOT", "true").lower() != "false",
+        "recaptcha_timeout_ms": int(os.getenv("RECAPTCHA_TIMEOUT_MS", "180000")),
+        "recaptcha_max_retries": int(os.getenv("RECAPTCHA_MAX_RETRIES", "3")),
+        "page_retries": int(os.getenv("PAGE_RETRIES", "5")),
+        "phone": os.getenv("PHONE", ""),
+        "email": os.getenv("EMAIL", ""),
+        "captcha_api_key": os.getenv("CAPTCHA_API_KEY", ""),
+        "randevu_type": os.getenv("RANDEVU_TYPE", "internet randevu"),
+    }
+
+CFG = _build_default_cfg()
+SETUP_MODE = "--setup" in sys.argv
+
+def _validate_env():
+    """Zorunlu ortam değişkenlerini kontrol et — sadece CLI modunda çağrılır."""
+    for key in ["TC_KIMLIK_NO", "DOGUM_TARIHI"]:
+        if not os.getenv(key):
+            print(f"[HATA] Eksik ortam değişkeni: {key}")
+            sys.exit(1)
+
+# Thread lock — eşzamanlı bot çalışmalarında CFG koruması
+_bot_lock = threading.Lock()
 
 # ─── Sabit dizinler ───
 BASE_DIR = Path(__file__).parent
@@ -810,7 +820,7 @@ def _wait_for_manual_solve(page, timeout_s) -> bool:
         return False
 
 
-def handle_recaptcha(page, timeout_ms, headless, max_retries) -> bool:
+def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=None) -> bool:
     """reCAPTCHA çözme stratejisi (2captcha öncelikli):
 
     1. CAPTCHA_API_KEY varsa → 2captcha HEMEN dene (zaman kaybetme)
@@ -823,7 +833,7 @@ def handle_recaptcha(page, timeout_ms, headless, max_retries) -> bool:
         print("[BILGI] reCAPTCHA algılanmadı — stealth mod başarılı!")
         return True
 
-    api_key = CFG.get("captcha_api_key", "")
+    api_key = captcha_api_key or CFG.get("captcha_api_key", "")
     print("[BILGI] reCAPTCHA algılandı.")
 
     # ══════════════════════════════════════════════════════════
@@ -1004,8 +1014,21 @@ class RecaptchaFailed(Exception):
 # ═══════════════════════════════════════════════════════════════
 
 class HacettepeBot:
-    def __init__(self):
+    def __init__(self, config_override=None, status_callback=None):
         self.result = None
+        self._status_callback = status_callback
+        self._cfg = dict(CFG)
+        if config_override:
+            self._cfg.update(config_override)
+
+    def _emit(self, step, message):
+        """Print + status callback çağrısı."""
+        print(message)
+        if self._status_callback:
+            try:
+                self._status_callback(step, message)
+            except Exception:
+                pass
 
     def _screenshot(self, page, name):
         try:
@@ -1017,9 +1040,10 @@ class HacettepeBot:
         """Tek kontrol — reCAPTCHA başarısız olursa temiz profil ile tekrar dener."""
         from scrapling.fetchers import StealthyFetcher
 
-        max_retries = CFG["page_retries"]
-        print(f"[BILGI] Hedef: {CFG['target_url']}")
-        print(f"[BILGI] Mod: {'SETUP' if SETUP_MODE else 'headless=' + str(CFG['headless'])}")
+        cfg = self._cfg
+        max_retries = cfg["page_retries"]
+        self._emit("init", f"[BILGI] Hedef: {cfg['target_url']}")
+        self._emit("init", f"[BILGI] Mod: {'SETUP' if SETUP_MODE else 'headless=' + str(cfg['headless'])}")
 
         for attempt in range(1, max_retries + 1):
             # Her denemede temiz profil
@@ -1027,13 +1051,13 @@ class HacettepeBot:
                 shutil.rmtree(PROFILE_DIR, ignore_errors=True)
             PROFILE_DIR.mkdir(exist_ok=True)
 
-            print(f"\n[BILGI] === Deneme {attempt}/{max_retries} ===")
+            self._emit("retry", f"\n[BILGI] === Deneme {attempt}/{max_retries} ===")
 
             # page_action sonucunu paylaşmak için closure dict
             flow_result = {"code": None, "error": None}
 
             def page_action(page):
-                page.set_default_timeout(CFG["timeout_ms"])
+                page.set_default_timeout(cfg["timeout_ms"])
                 try:
                     code = self._flow(page)
                     flow_result["code"] = code
@@ -1048,8 +1072,8 @@ class HacettepeBot:
 
             try:
                 StealthyFetcher.fetch(
-                    CFG["target_url"],
-                    headless=CFG["headless"],
+                    cfg["target_url"],
+                    headless=cfg["headless"],
                     block_webrtc=True,
                     hide_canvas=True,
                     allow_webgl=True,
@@ -1086,8 +1110,12 @@ class HacettepeBot:
         return 1
 
 
-    def _search_and_select(self, page, search_text) -> bool:
-        """Üstteki arama alanına yaz, açılan dialog/modal'dan sonuç seç."""
+    def _search_and_select_first(self, page, search_text):
+        """Üstteki arama alanına yaz, dialog'dan tüm alternatifleri topla, ilkini seç.
+
+        Returns:
+            (selected: bool, alternatives: list[str])
+        """
 
         # ── Adım 1: "Birim veya Doktor ismi ile arama" metninin altındaki input'u bul ──
         search_field = None
@@ -1095,7 +1123,6 @@ class HacettepeBot:
         # JS ile label'e en yakın non-combo input'u bul ve data attribute ile işaretle
         try:
             found = page.evaluate("""() => {
-                // Leaf text node'ları tara
                 var walker = document.createTreeWalker(
                     document.body, NodeFilter.SHOW_TEXT, null);
                 var labelEl = null;
@@ -1109,7 +1136,6 @@ class HacettepeBot:
 
                 var labelRect = labelEl.getBoundingClientRect();
 
-                // Tüm vaadin-text-field ve input'ları tara (combo-box dışı)
                 var candidates = document.querySelectorAll('vaadin-text-field, input');
                 var best = null;
                 var bestDist = 999999;
@@ -1159,14 +1185,12 @@ class HacettepeBot:
         if not search_field:
             print("  [ARAMA] Arama alanı bulunamadı.")
             self._screenshot(page, "debug-no-search-field")
-            return False
+            return False, []
 
         print(f"  [ARAMA] Arama alanı bulundu, yazılıyor: {search_text[:30]}...")
         try:
-            # vaadin-text-field ise shadow root içindeki input'a eriş
             tag = search_field.evaluate("el => el.tagName.toLowerCase()")
             if tag == "vaadin-text-field":
-                # Shadow DOM input'una tıkla
                 search_field.locator("input").first.click()
             else:
                 search_field.click()
@@ -1178,11 +1202,11 @@ class HacettepeBot:
             human_delay(1500, 3000)
         except Exception as e:
             print(f"  [ARAMA] Arama alanına yazılamadı: {e}")
-            return False
+            return False, []
 
         self._screenshot(page, "debug-after-search-type")
 
-        # ── Adım 2: Enter ile arama tetikle + biraz bekle ──
+        # ── Adım 2: Enter ile arama tetikle ──
         try:
             page.keyboard.press("Enter")
             print("  [ARAMA] Enter ile arama tetiklendi.")
@@ -1192,7 +1216,7 @@ class HacettepeBot:
 
         self._screenshot(page, "debug-after-search-submit")
 
-        # ── Adım 3: Modal/dialog açıldıysa, içindeki arama + sonuç seçimi ──
+        # ── Adım 3: Modal/dialog açıldıysa, içindeki arama alanına search_text yaz ──
         dialog_found = False
         try:
             dialog = page.locator("vaadin-dialog-overlay")
@@ -1200,7 +1224,6 @@ class HacettepeBot:
                 dialog_found = True
                 print("  [ARAMA] Dialog/modal açıldı.")
 
-                # Dialog içindeki arama alanı
                 dialog_input = None
                 for get_dinput in [
                     lambda: dialog.first.locator('input[placeholder*="ara" i]').first,
@@ -1223,7 +1246,6 @@ class HacettepeBot:
                     dialog_input.fill("")
                     page.keyboard.type(search_text[:20], delay=60)
                     human_delay(1000, 2000)
-                    # Enter ile ara
                     page.keyboard.press("Enter")
                     human_delay(1500, 3000)
 
@@ -1231,10 +1253,11 @@ class HacettepeBot:
         except Exception:
             pass
 
-        # ── Adım 4: Sonuçlardan eşleşeni bul ve tıkla ──
+        # ── Adım 4: Tüm alternatifleri topla, sonra ilkini seç ──
+        alternatives = []
         selected = False
+        first_item = None
 
-        # Sonuçları ara — grid row, list item, tablo satırı, vb.
         result_selectors = [
             'vaadin-grid-cell-content',
             'vaadin-grid vaadin-grid-cell-content',
@@ -1248,7 +1271,6 @@ class HacettepeBot:
             'span[class*="item"]',
         ]
 
-        # Önce dialog içinde ara, sonra sayfada
         containers = []
         if dialog_found:
             try:
@@ -1257,11 +1279,14 @@ class HacettepeBot:
                 pass
         containers.append(page)
 
+        search_lower = search_text.lower().strip()
+
+        # Önce tüm eşleşen alternatifleri topla (tıklamadan)
         for container in containers:
-            if selected:
+            if alternatives:
                 break
             for sel in result_selectors:
-                if selected:
+                if alternatives:
                     break
                 try:
                     items = container.locator(sel).all()
@@ -1270,27 +1295,35 @@ class HacettepeBot:
                             txt = (item.text_content() or "").strip()
                             if not txt or len(txt) < 3:
                                 continue
-                            # Tam metin eşleşmesi — "Odası 2" vs "Odası 1" ayrımı
-                            search_lower = search_text.lower().strip()
                             txt_lower = txt.lower().strip()
-                            # Sonuç metninin başında arama metni olmalı
                             if txt_lower.startswith(search_lower) or \
                                search_lower == txt_lower or \
+                               search_lower in txt_lower or \
                                txt_lower.split(" - ")[0].strip() == search_lower:
-                                print(f"  [ARAMA] Eşleşen sonuç bulundu: {txt[:60]}")
-                                item.click(timeout=5000)
-                                selected = True
-                                human_delay(500, 1000)
-                                break
+                                alternatives.append(txt)
+                                if first_item is None:
+                                    first_item = item
                         except Exception:
                             continue
                 except Exception:
                     continue
 
+        if alternatives:
+            print(f"  [ARAMA] {len(alternatives)} alternatif bulundu: {[a[:40] for a in alternatives]}")
+
+        # İlk eşleşeni tıkla
+        if first_item is not None:
+            try:
+                print(f"  [ARAMA] İlk alternatif seçiliyor: {alternatives[0][:60]}")
+                first_item.click(timeout=5000)
+                selected = True
+                human_delay(500, 1000)
+            except Exception as e:
+                print(f"  [ARAMA] İlk alternatif tıklanamadı: {e}")
+
         if selected:
             print("  [ARAMA] Sonuç seçildi!")
             human_delay(1000, 2000)
-            # Dialog kapanmasını bekle
             try:
                 page.locator("vaadin-dialog-overlay").wait_for(
                     state="detached", timeout=5000
@@ -1301,7 +1334,988 @@ class HacettepeBot:
             print("  [ARAMA] Sonuçlardan eşleşen bulunamadı.")
             self._screenshot(page, "debug-no-match")
 
-        return selected
+        return selected, alternatives
+
+    # ── Scoped combo okuma helper ──
+
+    def _read_combo_items(self, page, combo, max_items=50):
+        """Vaadin combo-box'un seçeneklerini SCOPED olarak oku.
+
+        Global `page.locator("vaadin-combo-box-item")` yerine combo'nun
+        kendi filteredItems/items property'sini kullanır.
+        """
+        items_text = []
+        try:
+            # Combo'yu aç
+            try:
+                inp = combo.locator("input").first
+                inp.click(timeout=3000)
+            except Exception:
+                combo.click(timeout=3000)
+            human_delay(400, 700)
+
+            # Strateji 1: JS filteredItems / items property
+            try:
+                items_text = combo.evaluate("""el => {
+                    var items = el.filteredItems || el.items || [];
+                    return items.slice(0, %d).map(function(i) {
+                        if (typeof i === 'string') return i;
+                        if (i && i.label) return i.label;
+                        return String(i);
+                    }).filter(function(t) { return t && t !== 'undefined' && t !== 'null'; });
+                }""" % max_items)
+            except Exception:
+                items_text = []
+
+            # Strateji 2: combo'nun overlay element'inden DOM okuma
+            if not items_text:
+                try:
+                    items_text = combo.evaluate("""el => {
+                        var ov = el._overlayElement || (el.$ && el.$.overlay);
+                        if (!ov) {
+                            var ovId = el.getAttribute('id');
+                            if (ovId) ov = document.getElementById(ovId + '-overlay');
+                        }
+                        if (!ov) ov = document.querySelector('vaadin-combo-box-overlay[opened]');
+                        if (!ov) return [];
+                        var nodes = ov.querySelectorAll('vaadin-combo-box-item, [role="option"]');
+                        var result = [];
+                        for (var i = 0; i < nodes.length && i < %d; i++) {
+                            var txt = (nodes[i].textContent || '').trim();
+                            if (txt) result.push(txt);
+                        }
+                        return result;
+                    }""" % max_items)
+                except Exception:
+                    items_text = []
+
+            # Strateji 3 (son çare): global selector
+            if not items_text:
+                for sel in ['vaadin-combo-box-item', 'vaadin-combo-box-overlay [role="option"]']:
+                    locator_items = page.locator(sel).all()
+                    for item in locator_items[:max_items]:
+                        try:
+                            txt = (item.text_content() or "").strip()
+                            if txt:
+                                items_text.append(txt)
+                        except Exception:
+                            continue
+                    if items_text:
+                        break
+
+        except Exception as e:
+            print(f"  [READ-COMBO] Okuma hatası: {e}")
+        finally:
+            try:
+                page.keyboard.press("Escape")
+                human_delay(200, 400)
+            except Exception:
+                pass
+        return items_text
+
+    # ── Randevu tipi combo ──
+
+    def _find_randevu_type_combo(self, page):
+        """Randevu tipi combobox'u bul — pozisyon bazlı.
+
+        Strateji: 'Randevu Alamadım' butonunun hemen üstündeki,
+        değeri boş olan (veya 'internet' içeren) combo-box.
+        Dolu olan combo'lar (hastane, bölüm, doktor) zaten değer içerir,
+        randevu tipi combo'su henüz seçilmediği için boştur.
+
+        Returns:
+            combo element veya None
+        """
+        try:
+            # Daha önce işaretledik mi?
+            marked = page.locator('[data-hacbot-type-combo="true"]')
+            if marked.count() > 0:
+                return marked.first
+
+            # JS ile pozisyon bazlı bul:
+            # "Randevu Alamadım" butonunun hemen üstündeki combo
+            found = page.evaluate("""() => {
+                // Çapa: "Randevu Alamadım" butonu
+                var anchorBtn = null;
+                var buttons = document.querySelectorAll('vaadin-button, button');
+                for (var i = 0; i < buttons.length; i++) {
+                    var txt = (buttons[i].textContent || '').toLowerCase();
+                    if (txt.indexOf('randevu') >= 0 && txt.indexOf('alamad') >= 0) {
+                        anchorBtn = buttons[i];
+                        break;
+                    }
+                }
+                if (!anchorBtn) return -1;
+
+                var anchorRect = anchorBtn.getBoundingClientRect();
+                var combos = document.querySelectorAll('vaadin-combo-box');
+
+                // Butonun üstündeki combo'ları mesafeye göre sırala
+                var above = [];
+                for (var j = 0; j < combos.length; j++) {
+                    var combo = combos[j];
+                    var rect = combo.getBoundingClientRect();
+                    if (rect.width < 10 || rect.height < 5) continue;
+                    var style = window.getComputedStyle(combo);
+                    if (style.display === 'none' || style.visibility === 'hidden') continue;
+                    // Combo butonun üstünde veya aynı hizada olmalı
+                    if (rect.bottom > anchorRect.top + 10) continue;
+
+                    var inp = combo.querySelector('input');
+                    var val = inp ? (inp.value || '').trim() : '';
+
+                    above.push({
+                        index: j,
+                        dist: anchorRect.top - rect.bottom,
+                        value: val
+                    });
+                }
+
+                if (above.length === 0) return -1;
+
+                // En yakından en uzağa sırala
+                above.sort(function(a, b) { return a.dist - b.dist; });
+
+                // En yakın combo: değeri boş veya "internet" içeren
+                // (Ekranda gördüğümüz gibi: dolu combo'lar hastane/bölüm/doktor,
+                //  boş olan randevu tipi combo'su)
+                for (var k = 0; k < above.length; k++) {
+                    var c = above[k];
+                    if (c.value === '' || c.value.toLowerCase().indexOf('internet') >= 0) {
+                        combos[c.index].setAttribute('data-hacbot-type-combo', 'true');
+                        return c.index;
+                    }
+                }
+
+                // Hiçbiri boş değilse en yakını al (internet zaten seçilmiş olabilir)
+                var nearest = above[0];
+                combos[nearest.index].setAttribute('data-hacbot-type-combo', 'true');
+                return nearest.index;
+            }""")
+
+            if found is not None and found >= 0:
+                result = page.locator('[data-hacbot-type-combo="true"]').first
+                if result.count() > 0:
+                    try:
+                        val = result.locator("input").first.input_value() or ""
+                    except Exception:
+                        val = ""
+                    print(f"  [TYPE-COMBO] Randevu tipi combo bulundu (index {found}, değer: '{val}')")
+                    return result
+
+            print("  [TYPE-COMBO] Randevu tipi combo bulunamadı.")
+        except Exception as e:
+            print(f"  [TYPE-COMBO] Arama hatası: {e}")
+        return None
+
+    def _select_randevu_type(self, page, randevu_type):
+        """Randevu tipi combobox'unu bul ve belirtilen tipi seç.
+
+        Gerçek seçenekler: "İnternet Sonuç", "İnternetten Randevu"
+        Kullanıcı config'den: "internet randevu" veya "internet sonuç"
+
+        Eşleştirme: "randevu" kelimesi varsa → "İnternetten Randevu"
+                    "sonuç"/"sonuc" kelimesi varsa → "İnternet Sonuç"
+
+        Returns:
+            bool — seçim başarılı mı
+        """
+        self._emit("selecting_type", f"[BILGI] Randevu tipi seçiliyor: {randevu_type}")
+
+        combo = self._find_randevu_type_combo(page)
+        if not combo:
+            print("  [TYPE-COMBO] Randevu tipi combobox bulunamadı — bu adım atlanıyor.")
+            return False
+
+        # Hangi seçeneği arıyoruz? keyword belirle
+        rt_lower = randevu_type.lower()
+        if "sonuç" in rt_lower or "sonuc" in rt_lower:
+            keyword = "sonuç"
+        else:
+            keyword = "randevu"
+
+        try:
+            # Scoped okuma ile seçenekleri öğren
+            option_texts = self._read_combo_items(page, combo)
+            print(f"  [TYPE-COMBO] Scoped seçenekler: {option_texts}")
+
+            if not option_texts:
+                print("  [TYPE-COMBO] Hiç seçenek okunamadı.")
+                return False
+
+            # Eşleşen seçenek metnini bul
+            target_text = None
+            for txt in option_texts:
+                if keyword in txt.lower():
+                    target_text = txt
+                    break
+            if not target_text:
+                target_text = option_texts[0]
+                print(f"  [TYPE-COMBO] Keyword eşleşmedi, ilk seçenek: '{target_text}'")
+
+            # Combo'yu tekrar aç ve hedef seçeneği tıkla
+            try:
+                toggle = combo.locator('[part="toggle-button"], [slot="suffix"]').first
+                if toggle.count() > 0:
+                    toggle.click(timeout=3000)
+                else:
+                    combo.locator("input").first.click(timeout=3000)
+            except Exception:
+                combo.locator("input").first.click(timeout=3000)
+            human_delay(500, 1000)
+
+            selected = False
+            for sel in ['vaadin-combo-box-item', 'vaadin-combo-box-overlay [role="option"]']:
+                items = page.locator(sel).all()
+                for item in items:
+                    try:
+                        txt = (item.text_content() or "").strip()
+                        if txt == target_text:
+                            item.click(timeout=5000)
+                            human_delay(500, 800)
+                            time.sleep(3)
+                            self._emit("selecting_type", f"[BILGI] Randevu tipi seçildi: {txt}")
+                            selected = True
+                            break
+                    except Exception:
+                        continue
+                if selected:
+                    break
+
+            if not selected:
+                page.keyboard.press("Escape")
+                human_delay(200, 400)
+                print("  [TYPE-COMBO] Hedef seçenek tıklanamadı.")
+
+            return selected
+        except Exception as e:
+            print(f"  [TYPE-COMBO] Seçim hatası: {e}")
+            return False
+
+    # ── Birim/Doktor combo (pozisyon bazlı) ──
+
+    @staticmethod
+    def _looks_like_date_options(texts):
+        """Seçenek listesinin tarih (yıl/ay/gün) verisi olup olmadığını kontrol et.
+
+        Returns:
+            bool — True ise bu bir tarih combo'sudur
+        """
+        if not texts:
+            return False
+        sample = texts[:15]
+        n = len(sample)
+
+        year_count = sum(1 for t in sample if re.match(r"^\d{4}$", t.strip()))
+        if year_count >= n * 0.4:
+            return True
+
+        day_count = sum(1 for t in sample
+                        if re.match(r"^\d{1,2}$", t.strip()) and 1 <= int(t.strip()) <= 31)
+        if day_count >= n * 0.4:
+            return True
+
+        month_count = sum(1 for t in sample if t.strip() in MONTHS_TR)
+        if month_count >= n * 0.3:
+            return True
+
+        return False
+
+    @staticmethod
+    def _looks_like_internet_options(texts):
+        """Seçenek listesinin internet randevu/sonuç combo'su olup olmadığını kontrol et."""
+        if not texts:
+            return False
+        internet_count = sum(1 for t in texts[:10] if "internet" in t.lower())
+        return internet_count >= 1
+
+    def _find_unit_doctor_combo(self, page):
+        """Birim/doktor combo-box'unu bul — aday eleme + açıp doğrulama.
+
+        İki aşamalı:
+        1. JS ile aday combo index listesi oluştur (label/değer bazlı ön eleme)
+        2. Her adayı sırayla aç, ilk seçeneklere bak — yıl/ay/gün/internet ise reddet
+
+        Returns:
+            combo element veya None
+        """
+        try:
+            # Daha önce doğrulanmış combo var mı?
+            marked = page.locator('[data-hacbot-unit-combo="true"]')
+            if marked.count() > 0:
+                return marked.first
+
+            # ── Aşama 1: JS ile aday indekslerini topla ──
+            candidate_indices = page.evaluate("""() => {
+                var combos = document.querySelectorAll('vaadin-combo-box');
+                var indices = [];
+
+                // "Randevu alamadım" butonunun Y koordinatı (çapa)
+                var anchorY = null;
+                var buttons = document.querySelectorAll('vaadin-button, button');
+                for (var b = 0; b < buttons.length; b++) {
+                    var btnText = (buttons[b].textContent || '').toLowerCase();
+                    if (btnText.indexOf('randevu') >= 0 && btnText.indexOf('alamad') >= 0) {
+                        anchorY = buttons[b].getBoundingClientRect().y;
+                        break;
+                    }
+                }
+
+                for (var i = 0; i < combos.length; i++) {
+                    var combo = combos[i];
+
+                    // Görünür olmayan combo'ları atla
+                    var rect = combo.getBoundingClientRect();
+                    if (rect.width < 10 || rect.height < 5) continue;
+                    var style = window.getComputedStyle(combo);
+                    if (style.display === 'none' || style.visibility === 'hidden') continue;
+
+                    // Zaten işaretlenmişse atla
+                    if (combo.getAttribute('data-hacbot-type-combo')) continue;
+                    if (combo.getAttribute('data-hacbot-date-combo')) continue;
+
+                    var label = (combo.getAttribute('label') || '').toLowerCase();
+                    var inp = combo.querySelector('input');
+                    var val = inp ? (inp.value || '').toLowerCase().trim() : '';
+
+                    // Label kesin tarih kelimesi içeriyorsa atla
+                    var dateLabels = ['yıl', 'yil', 'gün', 'gun', 'year', 'month', 'day',
+                                      'doğum', 'dogum', 'birth'];
+                    if (dateLabels.some(function(kw) { return label.indexOf(kw) >= 0; })) continue;
+
+                    // Mevcut değer kesin tarih verisi ise atla
+                    var months = ['ocak', 'şubat', 'mart', 'nisan', 'mayıs', 'haziran',
+                                  'temmuz', 'ağustos', 'eylül', 'ekim', 'kasım', 'aralık'];
+                    if (/^\\d{4}$/.test(val)) continue;
+                    if (/^\\d{1,2}$/.test(val) && parseInt(val) >= 1 && parseInt(val) <= 31) continue;
+                    if (months.indexOf(val) >= 0) continue;
+                    if (val.indexOf('internet') >= 0) continue;
+
+                    // Sıralama için mesafe hesapla
+                    var dist = anchorY !== null ? Math.abs(rect.y - anchorY) : i * 100;
+                    indices.push({index: i, dist: dist});
+                }
+
+                // Çapaya en yakından en uzağa sırala
+                indices.sort(function(a, b) { return a.dist - b.dist; });
+                return indices.map(function(c) { return c.index; });
+            }""")
+
+            if not candidate_indices:
+                print("  [UNIT-COMBO] Hiç aday combo bulunamadı (JS ön eleme).")
+                return None
+
+            print(f"  [UNIT-COMBO] {len(candidate_indices)} aday combo bulundu, doğrulanıyor...")
+
+            # ── Aşama 2: Her adayı aç, seçeneklere bak, doğrula ──
+            combos = page.locator("vaadin-combo-box")
+
+            for idx in candidate_indices:
+                combo = combos.nth(idx)
+                try:
+                    # Scoped okuma ile combo'nun gerçek seçeneklerini al
+                    sample_texts = self._read_combo_items(page, combo, max_items=15)
+
+                    # Doğrulama: tarih verisi mi?
+                    if self._looks_like_date_options(sample_texts):
+                        combo.evaluate('el => el.setAttribute("data-hacbot-date-combo", "true")')
+                        print(f"  [UNIT-COMBO] Aday index {idx} tarih combo'su — atlanıyor (örnek: {sample_texts[:3]})")
+                        continue
+
+                    # Doğrulama: internet/tip combo'su mu?
+                    if self._looks_like_internet_options(sample_texts):
+                        combo.evaluate('el => el.setAttribute("data-hacbot-type-combo", "true")')
+                        print(f"  [UNIT-COMBO] Aday index {idx} tip combo'su — atlanıyor")
+                        continue
+
+                    # Bu combo geçerli! İşaretle ve döndür.
+                    combo.evaluate('el => el.setAttribute("data-hacbot-unit-combo", "true")')
+                    print(f"  [UNIT-COMBO] Birim/doktor combo doğrulandı (index {idx}, "
+                          f"{len(sample_texts)} seçenek, örnek: {[t[:25] for t in sample_texts[:3]]})")
+                    return combo
+
+                except Exception as e:
+                    print(f"  [UNIT-COMBO] Aday index {idx} kontrol hatası: {e}")
+                    continue
+
+            print("  [UNIT-COMBO] Tüm adaylar elendi — birim/doktor combo bulunamadı.")
+        except Exception as e:
+            print(f"  [UNIT-COMBO] Arama hatası: {e}")
+        return None
+
+    def _get_unit_combo_options(self, page):
+        """Birim/doktor combo-box'un tüm seçeneklerini topla (scoped).
+
+        Returns:
+            list[str] — seçenek isimleri
+        """
+        options = []
+        try:
+            combo = self._find_unit_doctor_combo(page)
+            if not combo:
+                return options
+
+            raw_items = self._read_combo_items(page, combo, max_items=200)
+            for txt in raw_items:
+                if txt and len(txt) >= 3 and txt not in options:
+                    options.append(txt)
+
+            # Son güvenlik: seçenekler tarih verisine benziyorsa bu yanlış combo
+            if self._looks_like_date_options(options):
+                print(f"  [UNIT-COMBO] UYARI: Seçenekler tarih verisi! İşaret kaldırılıyor (örnek: {options[:5]})")
+                combo.evaluate('el => { el.removeAttribute("data-hacbot-unit-combo"); '
+                               'el.setAttribute("data-hacbot-date-combo", "true"); }')
+                return []
+
+            print(f"  [UNIT-COMBO] {len(options)} seçenek bulundu: {[o[:30] for o in options[:5]]}")
+        except Exception as e:
+            print(f"  [UNIT-COMBO] Seçenek toplama hatası: {e}")
+        return options
+
+    def _select_unit_combo_option(self, page, option_text):
+        """Birim/doktor combo-box'ta belirtilen seçeneği seç.
+
+        Returns:
+            bool — seçim başarılı mı
+        """
+        try:
+            combo = self._find_unit_doctor_combo(page)
+            if not combo:
+                return False
+
+            inp = combo.locator("input").first
+            inp.click(timeout=5000)
+            human_delay(300, 600)
+            page.keyboard.press(SELECT_ALL_KEY)
+            page.keyboard.press("Backspace")
+            human_delay(200, 400)
+
+            page.keyboard.type(option_text[:15], delay=80)
+            human_delay(1000, 2000)
+
+            for sel in ['vaadin-combo-box-item', 'vaadin-combo-box-overlay [role="option"]']:
+                items = page.locator(sel).all()
+                for item in items:
+                    try:
+                        txt = (item.text_content() or "").strip()
+                        if option_text.lower()[:15] in txt.lower():
+                            item.click(timeout=5000)
+                            human_delay(500, 800)
+                            time.sleep(3)
+                            return True
+                    except Exception:
+                        continue
+
+            page.keyboard.press("Enter")
+            human_delay(500, 800)
+            time.sleep(3)
+            return True
+        except Exception as e:
+            print(f"  [UNIT-COMBO] Seçenek seçme hatası ({option_text[:30]}): {e}")
+            return False
+
+    # ── Randevu çıkarma (metin bazlı) ──
+
+    def _extract_appointments(self, page):
+        """Sayfa DOM'undan randevu bilgilerini renk + metin bazlı çıkar.
+
+        Hacettepe portalı renk kodlu grid kullanır:
+          Yeşil → AÇIK, Kırmızı → DOLU, Gri → KAPALI,
+          Mavi/Mor → WEB KAPASİTE DOLU, Teal → AÇILACAK
+
+        Returns:
+            dict: {available_slots: [{date, time, raw, status}], total_visible: int, has_availability: bool}
+        """
+        result = {"available_slots": [], "total_visible": 0, "has_availability": False}
+
+        # Önce sayfadaki DOM yapısını anlamak için diagnostik
+        try:
+            diag = page.evaluate("""() => {
+                var info = {};
+                // Vaadin grid var mı?
+                info.vaadinGridCount = document.querySelectorAll('vaadin-grid').length;
+                info.vaadinGridCellCount = document.querySelectorAll('vaadin-grid-cell-content').length;
+                info.tableCount = document.querySelectorAll('table').length;
+                info.tdCount = document.querySelectorAll('td').length;
+
+                // Sayfadaki tüm metin içinde saat deseni ara
+                var bodyText = document.body ? document.body.innerText || '' : '';
+                var timeMatches = bodyText.match(/\\d{1,2}[:.:]\\d{2}/g);
+                info.timeMatchesInBody = timeMatches ? timeMatches.slice(0, 20) : [];
+
+                // Shadow DOM'lardaki element sayıları
+                var shadowHosts = document.querySelectorAll('*');
+                var shadowCount = 0;
+                for (var i = 0; i < shadowHosts.length; i++) {
+                    if (shadowHosts[i].shadowRoot) shadowCount++;
+                }
+                info.shadowHostCount = shadowCount;
+
+                // Vaadin grid shadow root içerikleri
+                var grids = document.querySelectorAll('vaadin-grid');
+                info.gridDetails = [];
+                for (var g = 0; g < grids.length; g++) {
+                    var grid = grids[g];
+                    var detail = {tag: grid.tagName, childCount: grid.children.length};
+                    if (grid.shadowRoot) {
+                        detail.shadowChildCount = grid.shadowRoot.children.length;
+                        detail.shadowHTML = grid.shadowRoot.innerHTML.substring(0, 500);
+                    }
+                    // Vaadin grid items
+                    if (grid.items) {
+                        detail.itemCount = grid.items.length;
+                        detail.firstItems = grid.items.slice(0, 3).map(function(it) {
+                            return JSON.stringify(it).substring(0, 200);
+                        });
+                    }
+                    info.gridDetails.push(detail);
+                }
+
+                // div/span içinde saat deseni olan elementleri doğrudan say
+                var allEls = document.querySelectorAll('div, span, td, th, a, button, p, label');
+                var timeCells = [];
+                var timeRe = /\d{1,2}[:.]\d{2}/;
+                for (var j = 0; j < allEls.length && timeCells.length < 30; j++) {
+                    var el = allEls[j];
+                    var txt = el.textContent || '';
+                    // Sadece kısa metinleri kontrol et (saat hücresi genelde kısadır)
+                    if (txt.length < 30 && timeRe.test(txt)) {
+                        var rect = el.getBoundingClientRect();
+                        timeCells.push({
+                            tag: el.tagName,
+                            text: txt.trim().substring(0, 50),
+                            class: (el.className || '').substring(0, 100),
+                            w: Math.round(rect.width),
+                            h: Math.round(rect.height),
+                            bg: window.getComputedStyle(el).backgroundColor
+                        });
+                    }
+                }
+                info.timeCellsFound = timeCells;
+
+                return info;
+            }""")
+            print(f"  [APPOINTMENTS-DIAG] Vaadin grid: {diag.get('vaadinGridCount', 0)}, "
+                  f"cells: {diag.get('vaadinGridCellCount', 0)}, "
+                  f"tables: {diag.get('tableCount', 0)}, tds: {diag.get('tdCount', 0)}")
+            print(f"  [APPOINTMENTS-DIAG] Shadow hosts: {diag.get('shadowHostCount', 0)}")
+            print(f"  [APPOINTMENTS-DIAG] Body time matches: {diag.get('timeMatchesInBody', [])}")
+            time_cells = diag.get('timeCellsFound', [])
+            print(f"  [APPOINTMENTS-DIAG] Time cells found: {len(time_cells)}")
+            for tc in time_cells[:10]:
+                print(f"    {tc['tag']} text='{tc['text']}' class='{tc['class'][:50]}' "
+                      f"size={tc['w']}x{tc['h']} bg={tc['bg']}")
+            grid_details = diag.get('gridDetails', [])
+            for gd in grid_details:
+                print(f"  [APPOINTMENTS-DIAG] Grid: children={gd.get('childCount')}, "
+                      f"shadow={gd.get('shadowChildCount', 'N/A')}, "
+                      f"items={gd.get('itemCount', 'N/A')}")
+                if gd.get('firstItems'):
+                    for fi in gd['firstItems']:
+                        print(f"    Item: {fi[:150]}")
+        except Exception as e:
+            print(f"  [APPOINTMENTS-DIAG] Diagnostik hatası: {e}")
+
+        try:
+            appt_data = page.evaluate("""() => {
+                var data = {available_slots: [], total_visible: 0, all_slots: [], debug: []};
+                var timeRe = /(\d{1,2})[:.:](\d{2})/;
+
+                function classifyColor(bgColor, el) {
+                    var cls = (el.className || '').toLowerCase();
+                    if (/green|available|acik|açık|success|musait/.test(cls)) return 'açık';
+                    if (/red|full|dolu|danger|occupied/.test(cls)) return 'dolu';
+                    if (/gr[ae]y|closed|kapal|disabled/.test(cls)) return 'kapalı';
+                    if (/blue|purple|capacity|kapasite/.test(cls)) return 'web_kapasite_dolu';
+                    if (/teal|cyan|acilacak/.test(cls)) return 'açılacak';
+
+                    var m = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                    if (!m) return 'bilinmiyor';
+                    var r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+                    var maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+
+                    if (minC > 230) return 'bos';
+                    if (maxC - minC < 30 && maxC < 200 && maxC > 50) return 'kapalı';
+                    if (g > r + 30 && g > b + 30) return 'açık';
+                    if (r > g + 30 && r > b + 30) return 'dolu';
+                    if (b > r + 20 && b > g + 20) return 'web_kapasite_dolu';
+                    if (g > r + 20 && b > r + 20 && Math.abs(g - b) < 60) return 'açılacak';
+                    return 'bilinmiyor';
+                }
+
+                var monthMap = {'oca':'01','şub':'02','sub':'02','mar':'03','nis':'04',
+                    'may':'05','haz':'06','tem':'07','ağu':'08','agu':'08',
+                    'eyl':'09','eki':'10','kas':'11','ara':'12'};
+                var curYear = new Date().getFullYear();
+
+                function parseTrDate(text) {
+                    var m = text.trim().match(/(\d{1,2})\s+([a-zçğıöşüA-ZÇĞİÖŞÜ]+)/i);
+                    if (m) {
+                        var day = m[1].padStart(2,'0');
+                        var mon = monthMap[m[2].substring(0,3).toLowerCase()];
+                        if (mon) return day + '.' + mon + '.' + curYear;
+                    }
+                    return '';
+                }
+
+                // Shadow DOM dahil tüm elementleri topla
+                function collectAllElements(root, result) {
+                    if (!root) return;
+                    var children = root.children || root.childNodes || [];
+                    for (var i = 0; i < children.length; i++) {
+                        var child = children[i];
+                        if (child.nodeType === 1) {
+                            result.push(child);
+                            // Shadow root varsa içine dal
+                            if (child.shadowRoot) {
+                                collectAllElements(child.shadowRoot, result);
+                            }
+                            collectAllElements(child, result);
+                        }
+                    }
+                }
+
+                // Tarih başlıklarını topla (pozisyon bazlı eşleştirme için)
+                var dateHeaders = [];
+                var allEls = [];
+                collectAllElements(document.body, allEls);
+
+                var dateHdrRe = /^\s*\d{1,2}\s+[A-Za-zçğıöşüÇĞİÖŞÜ]+\s*$/;
+                for (var h = 0; h < allEls.length; h++) {
+                    var htxt = (allEls[h].textContent || '').trim();
+                    if (dateHdrRe.test(htxt) && htxt.length < 30) {
+                        var hrect = allEls[h].getBoundingClientRect();
+                        if (hrect.width > 0 && hrect.height > 0) {
+                            var pd = parseTrDate(htxt);
+                            if (pd) {
+                                dateHeaders.push({
+                                    date: pd,
+                                    centerX: hrect.left + hrect.width / 2,
+                                    text: htxt
+                                });
+                            }
+                        }
+                    }
+                }
+                data.debug.push('dateHeaders: ' + dateHeaders.length + ' found');
+
+                // Saat hücrelerini tara — shadow DOM dahil
+                var visited = {};
+                for (var i = 0; i < allEls.length; i++) {
+                    var el = allEls[i];
+                    // Sadece yaprak veya kısa metinli elementler
+                    var text = '';
+                    // innerText yerine textContent - ama sadece kısa olanlar
+                    var rawText = el.textContent || '';
+                    if (rawText.length > 40) continue;
+                    text = rawText.trim();
+                    if (!text) continue;
+
+                    var tm = text.match(timeRe);
+                    if (!tm) continue;
+
+                    var rect = el.getBoundingClientRect();
+                    if (rect.width === 0 || rect.height === 0) continue;
+                    var posKey = Math.round(rect.left) + ',' + Math.round(rect.top);
+                    if (visited[posKey]) continue;
+                    visited[posKey] = true;
+
+                    var time = tm[1].padStart(2,'0') + ':' + tm[2];
+
+                    // Renk analizi: element ve parent'ları tara
+                    var bg = '';
+                    var checkEl = el;
+                    var depth = 0;
+                    while (depth < 6) {
+                        if (!checkEl) break;
+                        var style = window.getComputedStyle(checkEl);
+                        bg = style.backgroundColor;
+                        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') break;
+                        // Shadow host'a da bak
+                        checkEl = checkEl.parentElement || (checkEl.getRootNode && checkEl.getRootNode().host);
+                        depth++;
+                    }
+
+                    var status = classifyColor(bg || '', el);
+                    if (status === 'bos') continue;
+
+                    // Tarih eşleştirme: X konumuna en yakın tarih başlığı
+                    var date = '';
+                    var cellCX = rect.left + rect.width / 2;
+                    var minDist = Infinity;
+                    for (var d = 0; d < dateHeaders.length; d++) {
+                        var dist = Math.abs(cellCX - dateHeaders[d].centerX);
+                        if (dist < minDist) { minDist = dist; date = dateHeaders[d].date; }
+                    }
+
+                    data.total_visible++;
+                    var slotInfo = {date: date, time: time,
+                        raw: (date ? date + ' ' : '') + time + ' [' + status + ']',
+                        status: status};
+                    data.all_slots.push(slotInfo);
+                    if (status === 'açık') data.available_slots.push(slotInfo);
+                }
+
+                data.debug.push('total_visible: ' + data.total_visible);
+                return data;
+            }""")
+
+            if appt_data:
+                result["available_slots"] = appt_data.get("available_slots", [])
+                result["total_visible"] = appt_data.get("total_visible", 0)
+                result["has_availability"] = len(result["available_slots"]) > 0
+
+                debug_msgs = appt_data.get("debug", [])
+                for dm in debug_msgs:
+                    print(f"  [APPOINTMENTS-JS] {dm}")
+
+                all_slots = appt_data.get("all_slots", [])
+                if all_slots:
+                    status_counts = {}
+                    for s in all_slots:
+                        st = s.get("status", "?")
+                        status_counts[st] = status_counts.get(st, 0) + 1
+                    print(f"  [APPOINTMENTS] Toplam: {result['total_visible']}, "
+                          f"Müsait: {len(result['available_slots'])}, "
+                          f"Dağılım: {status_counts}")
+                else:
+                    print(f"  [APPOINTMENTS] Hiç slot bulunamadı (total_visible=0)")
+
+        except Exception as e:
+            print(f"  [APPOINTMENTS] Çıkarma hatası: {e}")
+            import traceback
+            traceback.print_exc()
+
+        return result
+
+    def _classify_appointments(self, page, appt_info):
+        """Randevu bilgisine göre durum sınıflandır."""
+        if appt_info.get("has_availability"):
+            return "AVAILABLE"
+        if appt_info.get("total_visible", 0) > 0:
+            return "NOT_AVAILABLE"
+
+        try:
+            body = re.sub(r"\s+", " ", page.locator("body").inner_text()).strip()
+        except Exception:
+            body = ""
+
+        neg = any(p.search(body) for p in NEGATIVE_PATTERNS)
+        if neg:
+            return "NOT_AVAILABLE"
+        pos = any(p.search(body) for p in POSITIVE_PATTERNS)
+        if pos:
+            return "POSSIBLY_AVAILABLE"
+        return "UNKNOWN"
+
+    def _format_slots(self, available_slots):
+        """Slot listesini okunabilir metne çevirir.
+
+        Returns:
+            str — "15.03.2026: 10:30, 12:00 | 16.03.2026: 09:00"
+        """
+        if not available_slots:
+            return "Müsait slot yok"
+
+        # Tarihe göre grupla
+        by_date = {}
+        for slot in available_slots:
+            date = slot.get("date", "") or "Tarih belirsiz"
+            time_str = slot.get("time", "") or slot.get("raw", "?")
+            if date not in by_date:
+                by_date[date] = []
+            by_date[date].append(time_str)
+
+        parts = []
+        for date, times in by_date.items():
+            parts.append(f"{date}: {', '.join(times)}")
+
+        return " | ".join(parts)
+
+    def _is_date_combo(self, page, combo):
+        """Combo-box'un doğum tarihi combo'su (Yıl/Ay/Gün) olup olmadığını kontrol et."""
+        try:
+            # Label kontrolü
+            label = (combo.get_attribute("label") or "").lower()
+            if any(kw in label for kw in ["yıl", "yil", "ay", "gün", "gun", "year", "month", "day"]):
+                return True
+
+            # Mevcut değer kontrolü
+            inp = combo.locator("input").first
+            val = (inp.input_value() or "").strip()
+
+            # Değer 4 haneli yıl mı?
+            if re.match(r"^\d{4}$", val):
+                return True
+            # Değer 1-2 haneli gün mü?
+            if re.match(r"^\d{1,2}$", val) and 1 <= int(val) <= 31:
+                return True
+            # Değer Türkçe ay adı mı?
+            if val in MONTHS_TR:
+                return True
+
+            # Değer boşsa seçeneklere bakarak karar ver
+            if not val:
+                try:
+                    inp.click(timeout=3000)
+                    human_delay(300, 500)
+                    items = page.locator("vaadin-combo-box-item").all()
+                    sample_texts = []
+                    for item in items[:10]:
+                        try:
+                            txt = (item.text_content() or "").strip()
+                            if txt:
+                                sample_texts.append(txt)
+                        except Exception:
+                            continue
+                    page.keyboard.press("Escape")
+                    human_delay(200, 400)
+
+                    if sample_texts:
+                        # Çoğu 4 haneli yılsa → tarih combo'su
+                        year_count = sum(1 for t in sample_texts if re.match(r"^\d{4}$", t))
+                        if year_count >= len(sample_texts) * 0.5:
+                            return True
+                        # Çoğu 1-31 arası sayıysa → gün combo'su
+                        day_count = sum(1 for t in sample_texts if re.match(r"^\d{1,2}$", t) and 1 <= int(t) <= 31)
+                        if day_count >= len(sample_texts) * 0.5:
+                            return True
+                        # Çoğu Türkçe ay adıysa → ay combo'su
+                        month_count = sum(1 for t in sample_texts if t in MONTHS_TR)
+                        if month_count >= len(sample_texts) * 0.5:
+                            return True
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return False
+
+    def _find_doctor_combo(self, page):
+        """Doğum tarihi combo'larını atlayıp doktor/birim combo-box'unu bul.
+
+        Returns:
+            combo element veya None
+        """
+        combos = page.locator("vaadin-combo-box:visible")
+        count = combos.count()
+        if count == 0:
+            print("  [COMBO] Sayfada combo-box bulunamadı.")
+            return None
+
+        for i in range(count):
+            combo = combos.nth(i)
+            if self._is_date_combo(page, combo):
+                continue
+            print(f"  [COMBO] Doktor/birim combo-box bulundu (index {i}/{count}).")
+            return combo
+
+        print(f"  [COMBO] {count} combo-box bulundu ama hepsi tarih combo'su.")
+        return None
+
+    def _get_combo_options(self, page):
+        """Randevu sayfasındaki doktor/birim combo-box'un tüm seçeneklerini topla.
+
+        Returns:
+            list[str] — seçenek isimleri
+        """
+        options = []
+        try:
+            combo = self._find_doctor_combo(page)
+            if not combo:
+                return options
+
+            inp = combo.locator("input").first
+
+            # Combo-box'u aç
+            inp.click(timeout=5000)
+            human_delay(500, 1000)
+
+            # Tüm seçenekleri topla
+            for sel in ['vaadin-combo-box-item', 'vaadin-combo-box-overlay [role="option"]']:
+                items = page.locator(sel).all()
+                for item in items:
+                    try:
+                        txt = (item.text_content() or "").strip()
+                        if txt and len(txt) >= 3 and txt not in options:
+                            options.append(txt)
+                    except Exception:
+                        continue
+                if options:
+                    break
+
+            # Dropdown'u kapat (Escape)
+            page.keyboard.press("Escape")
+            human_delay(300, 500)
+
+            print(f"  [COMBO] {len(options)} seçenek bulundu: {[o[:30] for o in options[:5]]}")
+        except Exception as e:
+            print(f"  [COMBO] Seçenek toplama hatası: {e}")
+
+        return options
+
+    def _select_combo_option(self, page, option_text):
+        """Randevu sayfasındaki doktor/birim combo-box'ta belirtilen seçeneği seç.
+
+        Returns:
+            bool — seçim başarılı mı
+        """
+        try:
+            combo = self._find_doctor_combo(page)
+            if not combo:
+                return False
+
+            inp = combo.locator("input").first
+
+            # Combo-box'a tıkla ve temizle
+            inp.click(timeout=5000)
+            human_delay(300, 600)
+            page.keyboard.press(SELECT_ALL_KEY)
+            page.keyboard.press("Backspace")
+            human_delay(200, 400)
+
+            # Seçenek metninin bir kısmını yaz (filtre tetiklenir)
+            page.keyboard.type(option_text[:15], delay=80)
+            human_delay(1000, 2000)
+
+            # Overlay'den eşleşen seçeneği tıkla
+            for sel in ['vaadin-combo-box-item', 'vaadin-combo-box-overlay [role="option"]']:
+                items = page.locator(sel).all()
+                for item in items:
+                    try:
+                        txt = (item.text_content() or "").strip()
+                        if option_text.lower()[:15] in txt.lower():
+                            item.click(timeout=5000)
+                            human_delay(500, 800)
+                            # Vaadin server round-trip bekle
+                            time.sleep(3)
+                            return True
+                    except Exception:
+                        continue
+
+            # Fallback: Enter ile ilk sonucu al
+            page.keyboard.press("Enter")
+            human_delay(500, 800)
+            time.sleep(3)
+            return True
+        except Exception as e:
+            print(f"  [COMBO] Seçenek seçme hatası ({option_text[:30]}): {e}")
+            return False
+
+    def _classify_slots(self, page, slot_info):
+        """Slot bilgisine ve sayfa metnine göre durum sınıflandır."""
+        if slot_info["green"] > 0:
+            return "AVAILABLE"
+        try:
+            body = re.sub(r"\s+", " ", page.locator("body").inner_text()).strip()
+        except Exception:
+            body = ""
+        neg = any(p.search(body) for p in NEGATIVE_PATTERNS)
+        pos = any(p.search(body) for p in POSITIVE_PATTERNS)
+        if neg:
+            return "NOT_AVAILABLE"
+        if pos:
+            return "POSSIBLY_AVAILABLE"
+        return "UNKNOWN"
 
     def _analyze_slots(self, page):
         """Randevu slotlarını renk kodlarına göre analiz et.
@@ -1395,22 +2409,20 @@ class HacettepeBot:
         return result
 
     def _flow(self, page) -> int:
+        cfg = self._cfg
         # ── Google ziyareti: reCAPTCHA güven cookieleri oluştur ──
         try:
-            print("[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
+            self._emit("google_visit", "[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
             page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=15000)
             time.sleep(random.uniform(1.5, 3.0))
-            # Google'da biraz gezin
             simulate_human(page, extensive=True)
             time.sleep(random.uniform(1.0, 2.0))
-            # Hedef sayfaya git
-            page.goto(CFG["target_url"], wait_until="networkidle", timeout=30000)
+            page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
             time.sleep(2)
         except Exception as e:
-            print(f"[UYARI] Google pre-visit hatası: {e}")
-            # Hata olursa hedef sayfaya yeniden git
+            self._emit("google_visit", f"[UYARI] Google pre-visit hatası: {e}")
             try:
-                page.goto(CFG["target_url"], wait_until="networkidle", timeout=30000)
+                page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
                 time.sleep(2)
             except Exception:
                 pass
@@ -1420,13 +2432,13 @@ class HacettepeBot:
         time.sleep(random.uniform(1.0, 2.0))
 
         # ── TC ──
-        print("[BILGI] TC Kimlik No dolduruluyor...")
+        self._emit("fill_tc", "[BILGI] TC Kimlik No dolduruluyor...")
         tc_ok = fill_first(page, [
             page.get_by_label(re.compile(r"(t\.?c\.?|tc).*kimlik", re.I)),
             page.locator('input[name*="tc" i], input[id*="tc" i]'),
             page.locator('input[placeholder*="T.C" i], input[placeholder*="Kimlik" i]'),
             page.get_by_role("textbox", name=re.compile(r"(t\.?c\.?|tc).*kimlik", re.I)),
-        ], CFG["tc"])
+        ], cfg["tc"])
 
         # TC alanında change event tetikle (Vaadin sunucuya değeri göndersin)
         try:
@@ -1446,20 +2458,20 @@ class HacettepeBot:
         human_delay(300, 700)
 
         # ── Doğum tarihi ──
-        print("[BILGI] Doğum tarihi dolduruluyor...")
+        self._emit("fill_birth", "[BILGI] Doğum tarihi dolduruluyor...")
         bd_ok = fill_first(page, [
             page.get_by_label(re.compile(r"doğum\s*tarihi", re.I)),
             page.locator('input[name*="dog" i], input[id*="dog" i], input[name*="birth" i], input[id*="birth" i]'),
             page.locator('input[placeholder*="Doğum" i], input[placeholder*="gg" i]'),
             page.get_by_role("textbox", name=re.compile(r"doğum\s*tarihi", re.I)),
-        ], CFG["birth_date"])
+        ], cfg["birth_date"])
         if not bd_ok:
-            bd_ok = fill_birth_combos(page, CFG["birth_date"])
+            bd_ok = fill_birth_combos(page, cfg["birth_date"])
 
         if not tc_ok or not bd_ok:
             self._screenshot(page, "debug-fill-failed")
             raise RuntimeError("TC veya doğum tarihi alanı bulunamadı.")
-        print("[BILGI] Form alanları dolduruldu.")
+        self._emit("fill_done", "[BILGI] Form alanları dolduruldu.")
         self._screenshot(page, "debug-after-fill")
         human_delay(300, 600)
 
@@ -1471,8 +2483,10 @@ class HacettepeBot:
         simulate_human(page, extensive=False)
         human_delay(300, 800)
 
+        self._emit("recaptcha", "[BILGI] reCAPTCHA işleniyor...")
         rc_ok = handle_recaptcha(
-            page, CFG["recaptcha_timeout_ms"], CFG["headless"], CFG["recaptcha_max_retries"]
+            page, cfg["recaptcha_timeout_ms"], cfg["headless"], cfg["recaptcha_max_retries"],
+            captcha_api_key=cfg.get("captcha_api_key", "")
         )
 
         if SETUP_MODE:
@@ -1503,7 +2517,7 @@ class HacettepeBot:
             pass
 
         # ── Form gönder ──
-        print("[BILGI] Form gönderiliyor...")
+        self._emit("submit", "[BILGI] Form gönderiliyor...")
         submitted = False
         # Strateji 1: Vaadin buton tıkla (force=True ile overlay bypass)
         for get_btn in [
@@ -1529,7 +2543,7 @@ class HacettepeBot:
                 print("[BILGI] Enter tuşu ile gönderildi.")
             except Exception:
                 pass
-        print(f"[BILGI] Giriş butonu tıklandı: {submitted}")
+        self._emit("submit", f"[BILGI] Giriş butonu tıklandı: {submitted}")
         time.sleep(4)  # Vaadin server round-trip için yeterli
         self._screenshot(page, "debug-after-giris")
 
@@ -1606,68 +2620,149 @@ class HacettepeBot:
                 pass
 
         # ── Bilgi tamamlama dialogu ──
-        handle_info_dialog(page, CFG["phone"], CFG["email"])
+        handle_info_dialog(page, cfg["phone"], cfg["email"])
 
         # ── Arama ile doktor/birim bulma ──
-        search_text = CFG["doctor"] or CFG["clinic"] or ""
+        search_text = cfg["doctor"] or cfg["clinic"] or ""
+        randevu_type = cfg.get("randevu_type", "internet randevu")
+        all_results = []
+        alternatives = []
+
         if search_text:
-            print(f"[BILGI] Arama yapılıyor: {search_text}")
-            ok = self._search_and_select(page, search_text)
-            print(f"[BILGI] Arama: {'başarılı' if ok else 'başarısız'}")
+            self._emit("search", f"[BILGI] Arama yapılıyor: {search_text}")
+            selected, alternatives = self._search_and_select_first(page, search_text)
+            self._emit("search", f"[BILGI] Arama: {'başarılı' if selected else 'başarısız'}")
             time.sleep(random.uniform(2.0, 4.0))
 
-        # Sonuçları bekle
+        # ── Randevu tipi seçimi (YENİ ADIM) ──
+        self._select_randevu_type(page, randevu_type)
         time.sleep(3)
+
+        # Grid yüklenmesini bekle — Vaadin bazen yavaş olabiliyor
+        for wait_attempt in range(5):
+            has_grid = page.evaluate("""() => {
+                // Body'de saat deseni var mı kontrol et
+                var bodyText = document.body ? document.body.innerText || '' : '';
+                var hasTime = /\\d{1,2}[:.:]\\d{2}/.test(bodyText);
+                // Vaadin grid var mı
+                var hasGrid = document.querySelectorAll('vaadin-grid').length > 0;
+                // Tablo var mı
+                var hasTable = document.querySelectorAll('table').length > 0;
+                return {hasTime: hasTime, hasGrid: hasGrid, hasTable: hasTable};
+            }""")
+            print(f"  [GRID-WAIT] Deneme {wait_attempt+1}: time={has_grid.get('hasTime')}, "
+                  f"grid={has_grid.get('hasGrid')}, table={has_grid.get('hasTable')}")
+            if has_grid.get('hasTime') or has_grid.get('hasGrid') or has_grid.get('hasTable'):
+                break
+            time.sleep(2)
+        else:
+            print("  [GRID-WAIT] 10 saniye bekledik ama grid/saat bulunamadı.")
+
+        time.sleep(1)
+        self._screenshot(page, "debug-after-type-select")
+
+        # ── İlk seçimin randevu analizi ──
+        self._emit("analyzing", "[BILGI] Randevular analiz ediliyor...")
+        ts = datetime.now().isoformat()
+        appt_info = self._extract_appointments(page)
         self._screenshot(page, "debug-after-search")
 
-        # ── Sonuç: Renk kodlu slot analizi ──
-        ts = datetime.now().isoformat()
-        slot_info = self._analyze_slots(page)
+        first_name = search_text
+        if search_text and alternatives:
+            first_name = alternatives[0]
 
-        try:
-            body = re.sub(r"\s+", " ", page.locator("body").inner_text()).strip()
-        except Exception:
-            body = ""
+        first_status = self._classify_appointments(page, appt_info)
+        first_result = {
+            "name": first_name,
+            "appointments": appt_info,
+            "status": first_status,
+            "formatted": self._format_slots(appt_info["available_slots"]),
+        }
+        all_results.append(first_result)
 
-        neg = any(p.search(body) for p in NEGATIVE_PATTERNS)
-        pos = any(p.search(body) for p in POSITIVE_PATTERNS)
+        if appt_info["has_availability"]:
+            detail = self._format_slots(appt_info["available_slots"])
+            self._emit("available", f"[BILGI] MÜSAİT: {first_name} — {detail}")
 
-        # Slot renk analizi öncelikli
-        if slot_info["green"] > 0:
-            status = "AVAILABLE"
-        elif neg:
-            status = "NOT_AVAILABLE"
-        elif pos:
-            status = "POSSIBLY_AVAILABLE"
-        else:
-            status = "UNKNOWN"
+        self._screenshot(page, f"slot-{first_name[:20].replace(' ', '_')}")
+
+        # ── Birim/Doktor combo'daki TÜM seçenekleri tara ──
+        if search_text:
+            combo_options = self._get_unit_combo_options(page)
+            scanned_names = {first_name.lower().strip()}
+
+            for opt in combo_options:
+                opt_lower = opt.lower().strip()
+                if opt_lower in scanned_names:
+                    continue
+                scanned_names.add(opt_lower)
+
+                self._emit("scanning", f"[BILGI] Taranıyor: {opt}")
+                ok = self._select_unit_combo_option(page, opt)
+                if not ok:
+                    self._emit("scanning", f"[UYARI] Seçilemedi: {opt}")
+                    continue
+
+                opt_appt = self._extract_appointments(page)
+                opt_status = self._classify_appointments(page, opt_appt)
+                opt_result = {
+                    "name": opt,
+                    "appointments": opt_appt,
+                    "status": opt_status,
+                    "formatted": self._format_slots(opt_appt["available_slots"]),
+                }
+                all_results.append(opt_result)
+
+                if opt_appt["has_availability"]:
+                    detail = self._format_slots(opt_appt["available_slots"])
+                    self._emit("available", f"[BILGI] MÜSAİT: {opt} — {detail}")
+
+                self._screenshot(page, f"slot-{opt[:20].replace(' ', '_')}")
+
+        # ── Toplam özet hesapla ──
+        overall_status = "NOT_AVAILABLE"
+        total_available = 0
+        total_visible = 0
+        for r in all_results:
+            a = r["appointments"]
+            total_available += len(a.get("available_slots", []))
+            total_visible += a.get("total_visible", 0)
+            if r["status"] in ("AVAILABLE", "POSSIBLY_AVAILABLE"):
+                overall_status = "AVAILABLE"
+
+        if overall_status != "AVAILABLE" and not all_results:
+            overall_status = "UNKNOWN"
 
         self.result = {
-            "timestamp": ts, "status": status, "url": page.url,
-            "slots": slot_info,
+            "timestamp": ts, "status": overall_status, "url": page.url,
+            "total_available": total_available,
+            "total_visible": total_visible,
+            "alternatives": all_results,
         }
 
         (ARTIFACTS_DIR / "last-result.json").write_text(
             json.dumps(self.result, indent=2, ensure_ascii=False) + "\n"
         )
-        if CFG["save_screenshot"]:
+        if cfg["save_screenshot"]:
             self._screenshot(page, "last-check")
 
-        print(f"[{ts}] Slot analizi: {slot_info}")
-        if status == "AVAILABLE":
-            print(f"[{ts}] *** YEŞİL SLOT BULUNDU — RANDEVU MÜSAİT! ***")
+        self._emit("result", f"[{ts}] {len(all_results)} alternatif tarandı. Toplam görünen: {total_visible}, müsait: {total_available}")
+        if overall_status == "AVAILABLE":
+            avail_names = [r["name"] for r in all_results if r["status"] == "AVAILABLE"]
+            avail_details = []
+            for r in all_results:
+                if r["status"] == "AVAILABLE":
+                    avail_details.append(f"{r['name']}: {r['formatted']}")
+            self._emit("result", f"[{ts}] *** MÜSAİT RANDEVU: {'; '.join(avail_details)} ***")
             return 0
-        if status == "NOT_AVAILABLE":
-            print(f"[{ts}] Uygun randevu bulunamadı.")
+        if overall_status == "NOT_AVAILABLE":
+            self._emit("result", f"[{ts}] Hiçbir alternatifde uygun randevu bulunamadı.")
             return 2
-        if status == "POSSIBLY_AVAILABLE":
-            print(f"[{ts}] *** MUHTEMEL UYGUN RANDEVU BULUNDU! ***")
-            return 0
-        print(f"[{ts}] Durum belirsiz → artifacts/last-check.png")
+        self._emit("result", f"[{ts}] Durum belirsiz → artifacts/last-check.png")
         return 3
 
     def run(self) -> int:
-        interval = CFG["check_interval_minutes"]
+        interval = self._cfg["check_interval_minutes"]
         if interval > 0:
             print(f"[BILGI] Sürekli izleme: her {interval} dk.")
             while True:
@@ -1683,4 +2778,5 @@ class HacettepeBot:
 
 
 if __name__ == "__main__":
+    _validate_env()
     sys.exit(HacettepeBot().run())
