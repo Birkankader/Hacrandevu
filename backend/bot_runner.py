@@ -37,17 +37,18 @@ class _TeeWriter:
         self._real.flush()
 
 
-def run_bot_with_session(config: dict, status_callback=None) -> dict:
+def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) -> dict:
     """Session-aware bot araması. Mevcut session varsa login atlar.
 
     Args:
         config: Bot yapılandırması (tc, birth_date, doctor, vb.)
         status_callback: fn(step, message) — her adımda çağrılır
+        cancel_event: threading.Event — set edilirse bot iptal olur
 
     Returns:
         {"status": str, "alternatives": list, "exit_code": int, "session_reused": bool}
     """
-    from check_randevu import HacettepeBot, _bot_lock, RecaptchaFailed
+    from check_randevu import HacettepeBot, _bot_lock, RecaptchaFailed, BotCancelled
 
     config = _prepare_config(config)
     patient_tc = config.get("tc", "")
@@ -62,6 +63,7 @@ def run_bot_with_session(config: dict, status_callback=None) -> dict:
             bot = HacettepeBot(
                 config_override=config,
                 status_callback=status_callback,
+                cancel_event=cancel_event,
             )
 
             bs = sm.get_session(patient_tc)
@@ -101,6 +103,14 @@ def run_bot_with_session(config: dict, status_callback=None) -> dict:
             result["session_reused"] = session_reused
             return result
 
+        except BotCancelled:
+            return {
+                "status": "CANCELLED",
+                "error": "Arama iptal edildi.",
+                "exit_code": 1,
+                "session_reused": False,
+                "slots": {"green": 0, "red": 0, "grey": 0, "total": 0, "details": []},
+            }
         except Exception as e:
             # Hata durumunda session'ı kapat
             try:

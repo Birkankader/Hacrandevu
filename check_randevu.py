@@ -1009,20 +1009,32 @@ class RecaptchaFailed(Exception):
     pass
 
 
+class BotCancelled(Exception):
+    """Kullanıcı tarafından iptal edildi."""
+    pass
+
+
 # ═══════════════════════════════════════════════════════════════
 #  Bot — Scrapling StealthyFetcher
 # ═══════════════════════════════════════════════════════════════
 
 class HacettepeBot:
-    def __init__(self, config_override=None, status_callback=None):
+    def __init__(self, config_override=None, status_callback=None, cancel_event=None):
         self.result = None
         self._status_callback = status_callback
+        self._cancel_event = cancel_event
         self._cfg = dict(CFG)
         if config_override:
             self._cfg.update(config_override)
 
+    def _check_cancelled(self):
+        """İptal edilmiş mi kontrol et."""
+        if self._cancel_event and self._cancel_event.is_set():
+            raise BotCancelled("Arama kullanıcı tarafından iptal edildi.")
+
     def _emit(self, step, message):
-        """Print + status callback çağrısı."""
+        """Print + status callback çağrısı + iptal kontrolü."""
+        self._check_cancelled()
         print(message)
         if self._status_callback:
             try:
@@ -2549,6 +2561,28 @@ class HacettepeBot:
 
         self._screenshot(page, "debug-after-recaptcha")
 
+        # Callback login'i zaten tetiklemiş olabilir — kısa bekle ve kontrol et
+        time.sleep(2)
+        if not _recaptcha_present(page):
+            print("[BILGI] reCAPTCHA kayboldu — callback giriş işlemini tamamlamış olabilir.")
+            # Sayfa zaten arama sayfasına geçmiş mi?
+            try:
+                current_url = page.url
+                if "public/main" not in current_url.lower() or "user=PUBLIC" not in current_url:
+                    print(f"[BILGI] Sayfa değişti — login callback ile tamamlandı: {current_url[:80]}")
+                    return True
+            except Exception:
+                pass
+            # Dialog açılmış mı?
+            try:
+                dialog = page.locator("vaadin-dialog-overlay")
+                if dialog.count() > 0:
+                    print("[BILGI] Dialog bulundu — login callback ile tamamlandı!")
+                    handle_info_dialog(page, cfg["phone"], cfg["email"])
+                    return True
+            except Exception:
+                pass
+
         # Token expire olmasın diye hızlı devam et
         time.sleep(random.uniform(0.5, 1.0))
 
@@ -2592,7 +2626,7 @@ class HacettepeBot:
             except Exception:
                 pass
         self._emit("submit", f"[BILGI] Giriş butonu tıklandı: {submitted}")
-        time.sleep(4)  # Vaadin server round-trip için yeterli
+        time.sleep(6)  # Vaadin server round-trip — 2captcha sonrası daha uzun sürebilir
         self._screenshot(page, "debug-after-giris")
 
         # Vaadin notification kontrolü (sunucu hata mesajı)
@@ -2622,11 +2656,24 @@ class HacettepeBot:
         if not login_ok:
             try:
                 post_login = page.locator("button, vaadin-button, a").filter(
-                    has_text=re.compile(r"güvenli|randevularım|çıkış", re.I)
+                    has_text=re.compile(r"güvenli|randevularım|çıkış|ara", re.I)
                 )
                 if post_login.count() > 0:
                     login_ok = True
                     print("[BILGI] Login başarılı — post-login göstergeler bulundu!")
+            except Exception:
+                pass
+
+        # Arama sayfası elementleri (login sonrası sayfa yüklendi mi?)
+        if not login_ok:
+            try:
+                search_indicators = page.locator(
+                    'input[placeholder*="ara" i], input[placeholder*="search" i], '
+                    'vaadin-text-field[placeholder*="ara" i], vaadin-combo-box'
+                )
+                if search_indicators.count() > 0:
+                    login_ok = True
+                    print("[BILGI] Login başarılı — arama sayfası elementleri bulundu!")
             except Exception:
                 pass
 
@@ -2641,10 +2688,17 @@ class HacettepeBot:
                 pass
 
         if not login_ok:
-            # reCAPTCHA iframe hâlâ varsa login sayfasındayız
+            # reCAPTCHA iframe hâlâ varsa VE TC input hâlâ görünüyorsa login sayfasındayız
+            # (Vaadin SPA'da iframe DOM'da kalabilir ama sayfa değişmiş olabilir)
             try:
                 rc = page.locator('iframe[src*="recaptcha" i]')
-                if rc.count() > 0:
+                tc_input = page.locator('input[name*="tc" i], input[id*="tc" i]')
+                still_on_login = rc.count() > 0 and tc_input.count() > 0
+                if not still_on_login and rc.count() > 0:
+                    # reCAPTCHA var ama TC input yok — muhtemelen login başarılı
+                    print("[BILGI] reCAPTCHA iframe DOM'da kaldı ama TC input yok — login başarılı kabul ediliyor.")
+                    login_ok = True
+                elif still_on_login:
                     try:
                         body_text = page.locator("body").inner_text()[:500]
                         for line in body_text.split("\n"):

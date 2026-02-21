@@ -95,6 +95,8 @@ def get_session_status(patient_id: int):
 @app.websocket("/ws/search")
 async def ws_search(ws: WebSocket):
     await ws.accept()
+    cancel_event: threading.Event | None = None
+
     try:
         while True:
             try:
@@ -112,6 +114,14 @@ async def ws_search(ws: WebSocket):
 
             if action == "ping":
                 await ws.send_json({"type": "pong"})
+                continue
+
+            if action == "cancel":
+                if cancel_event:
+                    cancel_event.set()
+                    await ws.send_json({"type": "status", "step": "cancel", "message": "İptal sinyali gönderildi..."})
+                else:
+                    await ws.send_json({"type": "error", "message": "Aktif arama yok."})
                 continue
 
             if action == "session_status":
@@ -164,6 +174,7 @@ async def ws_search(ws: WebSocket):
             await ws.send_json({"type": "status", "step": "init", "message": "Bot başlatılıyor..."})
 
             loop = asyncio.get_event_loop()
+            cancel_event = threading.Event()
 
             # Status callback — thread'den WebSocket'e push
             def status_callback(step, message):
@@ -176,11 +187,13 @@ async def ws_search(ws: WebSocket):
                     pass
 
             # Bot'u ayrı thread'de çalıştır (blocking I/O)
+            ce = cancel_event  # closure capture
             result = await loop.run_in_executor(
                 None,
-                lambda: run_bot_with_session(bot_config, status_callback),
+                lambda: run_bot_with_session(bot_config, status_callback, cancel_event=ce),
             )
 
+            cancel_event = None
             await ws.send_json({"type": "result", "data": result})
 
             # Arama sonrası session durumunu gönder
@@ -189,7 +202,8 @@ async def ws_search(ws: WebSocket):
             await ws.send_json({"type": "session_status", "data": session_status})
 
     except WebSocketDisconnect:
-        pass
+        if cancel_event:
+            cancel_event.set()
     except Exception as e:
         try:
             await ws.send_json({"type": "error", "message": str(e)})

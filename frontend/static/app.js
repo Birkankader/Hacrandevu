@@ -187,6 +187,7 @@ const STEP_LABELS = {
     result: 'Sonuc',
     retry: 'Tekrar deneniyor',
     stdout: 'Islem',
+    cancel: 'Iptal',
 };
 
 let seenSteps = new Set();
@@ -228,8 +229,13 @@ function handleWsMessage(e) {
     if (msg.type === 'status') {
         addProgressStep(msg.step, msg.message);
     } else if (msg.type === 'result') {
-        showResult(msg.data);
-        finishSearch();
+        if (msg.data && msg.data.status === 'CANCELLED') {
+            addProgressStep('cancel', 'Arama iptal edildi.');
+            finishSearch();
+        } else {
+            showResult(msg.data);
+            finishSearch();
+        }
     } else if (msg.type === 'error') {
         addProgressStep('error', msg.message);
         finishSearch();
@@ -257,7 +263,8 @@ async function startSearch() {
     document.getElementById('resultSection').classList.add('hidden');
     document.getElementById('progressSteps').innerHTML = '';
     document.getElementById('progressSpinner').classList.remove('hidden');
-    document.getElementById('btnSearch').disabled = true;
+    document.getElementById('btnSearch').classList.add('hidden');
+    document.getElementById('btnCancel').classList.remove('hidden');
     seenSteps = new Set();
     searchInProgress = true;
 
@@ -317,9 +324,19 @@ function cleanMessage(msg) {
     return msg.replace(/^\[[\w]+\]\s*/i, '').trim();
 }
 
+function cancelSearch() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'cancel' }));
+    }
+    document.getElementById('btnCancel').disabled = true;
+    document.getElementById('spinnerText').textContent = 'Iptal ediliyor...';
+}
+
 function finishSearch() {
     document.getElementById('progressSpinner').classList.add('hidden');
-    document.getElementById('btnSearch').disabled = false;
+    document.getElementById('btnCancel').classList.add('hidden');
+    document.getElementById('btnCancel').disabled = false;
+    document.getElementById('btnSearch').classList.remove('hidden');
     searchInProgress = false;
     // WS'yi kapatma — session persistence icin acik tut
 }
