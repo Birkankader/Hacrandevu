@@ -457,7 +457,7 @@ def _eval_in_main_world(page, js_code, arg=None):
             return raw
 
 
-def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
+def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=None) -> bool:
     """2captcha servisi ile reCAPTCHA v2 çöz.
 
     Geliştirilmiş versiyon:
@@ -516,20 +516,40 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
         print("  [2captcha] Sitekey bulunamadı — reCAPTCHA widget sayfada yok olabilir.")
         return False
 
+    def _check_cancel():
+        if cancel_event and cancel_event.is_set():
+            raise BotCancelled("Arama iptal edildi.")
+
     # ── 2captcha'ya çözüm isteği gönder ──
     print(f"  [2captcha] Sitekey: {sitekey[:16]}... | URL: {page.url[:60]}")
     print("  [2captcha] Çözüm isteniyor... (genellikle 20-60 saniye)")
+    _check_cancel()
     token = None
     try:
         solver = TwoCaptcha(api_key)
-        solver.recaptcha_timeout = 300   # 5 dk (token 120s'de expire olur, fazla bekleme gereksiz)
-        solver.polling_interval = 5      # 5s aralıkla kontrol (daha hızlı yanıt)
-        result = solver.recaptcha(sitekey=sitekey, url=page.url)
+        solver.recaptcha_timeout = 300
+        solver.polling_interval = 5
+
+        # solver.recaptcha() bloklar — ayrı thread'de çalıştırıp cancel kontrol et
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(solver.recaptcha, sitekey=sitekey, url=page.url)
+            while True:
+                if cancel_event and cancel_event.is_set():
+                    raise BotCancelled("Arama iptal edildi (2captcha bekleme sırasında).")
+                try:
+                    result = future.result(timeout=2)
+                    break  # Sonuç alındı
+                except TimeoutError:
+                    continue  # Henüz bitmedi, tekrar kontrol
+
         token = result.get("code", "") if isinstance(result, dict) else str(result)
         if not token:
             print("  [2captcha] Servis boş token döndü.")
             return False
         print(f"  [2captcha] Token alındı ({len(token)} karakter).")
+    except BotCancelled:
+        raise
     except Exception as e:
         err_str = str(e)
         if "ERROR_CAPTCHA_UNSOLVABLE" in err_str:
@@ -541,6 +561,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
         else:
             print(f"  [2captcha] Servis hatası: {e}")
         return False
+    _check_cancel()
 
     # ── Challenge popup açıksa kapat ──
     try:
@@ -700,7 +721,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
             print(f"  [2captcha] Enjeksiyon sonucu alınamadı: {rc_result}")
             if attempt < max_attempts:
                 human_delay(1000, 2000)
-                return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts)
+                return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts, cancel_event)
             return False
 
         if rc_result.get("errors"):
@@ -713,7 +734,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
             if attempt < max_attempts:
                 print(f"  [2captcha] {attempt + 1}. token denenecek...")
                 human_delay(1000, 2000)
-                return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts)
+                return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts, cancel_event)
             else:
                 print("  [2captcha] Tüm denemeler callback bulamadı.")
                 return False
@@ -742,7 +763,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
                     if attempt < max_attempts:
                         _dismiss_challenge(page)
                         human_delay(1000, 2000)
-                        return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts)
+                        return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts, cancel_event)
                     return False
         except Exception:
             pass
@@ -756,7 +777,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2) -> bool:
         print(f"  [2captcha] Enjeksiyon hatası: {e}")
         if attempt < max_attempts:
             human_delay(1000, 2000)
-            return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts)
+            return _solve_with_2captcha(page, api_key, attempt + 1, max_attempts, cancel_event)
         return False
 
 
@@ -820,7 +841,7 @@ def _wait_for_manual_solve(page, timeout_s) -> bool:
         return False
 
 
-def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=None) -> bool:
+def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=None, cancel_event=None) -> bool:
     """reCAPTCHA çözme stratejisi (2captcha öncelikli):
 
     1. CAPTCHA_API_KEY varsa → 2captcha HEMEN dene (zaman kaybetme)
@@ -850,7 +871,7 @@ def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=No
         human_delay(500, 1500)
 
         # 2captcha ile çöz (dahili olarak 2 token denemesi yapar)
-        if _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2):
+        if _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=cancel_event):
             print("[BILGI] reCAPTCHA 2captcha ile çözüldü!")
             return True
         else:
@@ -865,6 +886,8 @@ def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=No
     # ══════════════════════════════════════════════════════════
     print("[BILGI] Auto-solve denemeleri başlıyor...")
     for attempt in range(1, max_retries + 1):
+        if cancel_event and cancel_event.is_set():
+            raise BotCancelled("Arama iptal edildi.")
         if attempt > 1:
             _dismiss_challenge(page)
             human_delay(2000, 4000)
@@ -2422,37 +2445,39 @@ class HacettepeBot:
 
     # ─── Session persistence helpers ───
 
-    def _is_session_valid(self, page) -> bool:
-        """Login sayfasına dönmüş mü kontrol et. True = hâlâ login'li."""
+    def _is_login_page(self, page) -> bool:
+        """Sayfa login formu mu kontrol et."""
         try:
-            # reCAPTCHA iframe varsa login sayfasındayız
+            tc_field = page.locator('input[name*="tc" i], input[id*="tc" i]')
+            if tc_field.count() > 0:
+                try:
+                    if tc_field.first.is_visible(timeout=2000):
+                        return True
+                except Exception:
+                    pass
             rc = page.locator('iframe[src*="recaptcha" i], iframe[title*="reCAPTCHA" i]')
             if rc.count() > 0:
-                return False
-            # URL kontrol — login sayfası mı?
-            url = page.url
-            if "user=PUBLIC" in url and "public/main" in url.lower():
-                # Login sayfasındaki göstergeler
-                tc_field = page.locator('input[name*="tc" i], input[id*="tc" i]')
-                if tc_field.count() > 0:
-                    return False
-            return True
+                return True
+            return False
         except Exception:
             return False
 
     def _reset_to_search_page(self, page) -> bool:
-        """Arama sonrası sayfayı target_url'e navigate edip login durumunu kontrol et.
+        """target_url'e gidip session hâlâ geçerli mi kontrol et.
+
+        Login'liyse site arama sayfasına yönlendirir.
+        Değilse login formuna düşer.
 
         Returns:
-            True — sayfa hazır, login hâlâ geçerli
-            False — session expire olmuş, yeniden login gerekiyor
+            True — session geçerli, arama sayfası yüklendi
+            False — session expire olmuş, login gerekiyor
         """
         cfg = self._cfg
         try:
             page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
-            time.sleep(2)
-            # Login sayfasına dönmüş mü?
-            if not self._is_session_valid(page):
+            time.sleep(3)
+            # Login sayfasına düştüyse session expire olmuş
+            if self._is_login_page(page):
                 return False
             # Bilgi tamamlama dialogu tekrar gelmiş olabilir
             handle_info_dialog(page, cfg["phone"], cfg["email"])
@@ -2546,7 +2571,8 @@ class HacettepeBot:
         self._emit("recaptcha", "[BILGI] reCAPTCHA işleniyor...")
         rc_ok = handle_recaptcha(
             page, cfg["recaptcha_timeout_ms"], cfg["headless"], cfg["recaptcha_max_retries"],
-            captcha_api_key=cfg.get("captcha_api_key", "")
+            captcha_api_key=cfg.get("captcha_api_key", ""),
+            cancel_event=self._cancel_event,
         )
 
         if SETUP_MODE:
