@@ -3207,6 +3207,9 @@ class HacettepeBot:
         if randevu_type is None:
             randevu_type = cfg.get("randevu_type", "internet randevu")
 
+        if self.result is None:
+            self.result = {}
+
         all_results = []
         alternatives = []
 
@@ -3282,26 +3285,7 @@ class HacettepeBot:
             detail = self._format_slots(appt_info["available_slots"])
             self._emit("available", f"[BILGI] MÜSAİT: {first_name} — {detail}")
             
-            if action_type == "auto_book" and appt_info["available_slots"]:
-                first_slot = appt_info["available_slots"][0]
-                self._emit("booking", f"[OTOMATIK] Auto-book devrede. İlk slot seçiliyor: {first_slot}")
-                
-                send_telegram_message_sync(
-                    f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\n\n"
-                    f"🏥 <b>Bölüm:</b> {first_name}\n"
-                    f"⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
-                )
-                
-                res = self._book_specific_slot(page, first_slot["date"], first_slot["time"], first_slot.get("subtime", ""))
-                self.result["booking"] = res
-                if res.get("success"):
-                    send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\n{res.get('message', '')}")
-                    return 0
-                else:
-                    send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\nDetay: {res.get('error', '')}")
-                    return 1
-
-            elif action_type in ("ask_telegram", "silent"):
+            if action_type in ("auto_book", "ask_telegram", "silent"):
                 # ask_telegram: Alt-saat bildirimi scheduler._handle_monitor_result tarafından yapılır
                 # silent: Booking öncesi grid hazırlığı — bildirim gönderme
                 pass
@@ -3355,24 +3339,7 @@ class HacettepeBot:
                     detail = self._format_slots(opt_appt["available_slots"])
                     self._emit("available", f"[BILGI] MÜSAİT: {opt} — {detail}")
                     
-                    if action_type == "auto_book" and opt_appt["available_slots"]:
-                        first_slot = opt_appt["available_slots"][0]
-                        self._emit("booking", f"[OTOMATIK] Auto-book devrede. İlk slot seçiliyor: {first_slot}")
-                        
-                        send_telegram_message_sync(
-                            f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\n\n🏥 <b>Bölüm:</b> {opt}\n⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
-                        )
-                        
-                        res = self._book_specific_slot(page, first_slot["date"], first_slot["time"], first_slot.get("subtime", ""))
-                        self.result["booking"] = res
-                        if res.get("success"):
-                            send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\n{res.get('message', '')}")
-                            return 0
-                        else:
-                            send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\nDetay: {res.get('error', '')}")
-                            return 1
-
-                    elif action_type in ("ask_telegram", "silent"):
+                    if action_type in ("auto_book", "ask_telegram", "silent"):
                         pass
                     else:
                         send_telegram_message_sync(
@@ -3486,10 +3453,13 @@ class HacettepeBot:
         # Booking: önce arama yap (grid'i oluştur), sonra slot'u tıkla
         if book and book_target:
             self._emit("booking", f"[RANDEVU] Arama + randevu alma: {book_target}")
-            
+
+            # result dict'i hazırla (fast-path'de _search_flow çağrılmayabilir)
+            if self.result is None:
+                self.result = {}
+
             # Fast-path: Eğer session yeniden kullanılmışsa (skip_login=True)
-            # ve saat blokları ekranda zaten varsa (yani bir önceki arama sonuçları duruyorsa),
-            # arama adımını pas geç.
+            # ve saat blokları ekranda zaten varsa, arama adımını atla.
             needs_search = True
             if skip_login:
                 try:
@@ -3499,20 +3469,20 @@ class HacettepeBot:
                         needs_search = False
                 except Exception:
                     pass
-            
+
             if needs_search:
                 # Aramayı yap — grid oluşsun (bildirim gönderme, sadece grid hazırla)
                 self._search_flow(page, search_text, randevu_type, probe_subtimes=False, action_type="silent")
 
             # Şimdi grid'deki hedef slot'a tıkla ve onayla
-            result = self._book_specific_slot(
+            booking_result = self._book_specific_slot(
                 page,
                 book_target["date"],
                 book_target["hour"],
                 book_target["subtime"],
             )
-            self.result["booking"] = result
-            return 0 if result.get("success") else 1
+            self.result["booking"] = booking_result
+            return 0 if booking_result.get("success") else 1
 
         return self._search_flow(page, search_text, randevu_type, probe_subtimes=probe_subtimes, action_type=action_type)
 

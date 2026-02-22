@@ -11,6 +11,10 @@ _stop_polling = asyncio.Event()
 # In-memory veritabanı: chat_id -> state dict
 user_states = {}
 
+# Probed subtimes cache: patient_id -> {"{date}|{hour}": [subtimes]}
+# Scheduler sonuç bulunca burada saklar, kullanıcı ana saat seçince buradan alır
+_probed_cache: dict[int, dict[str, list[str]]] = {}
+
 # Sabit buton seçenekleri
 DATE_PRESETS = [
     [{"text": "Tüm Zamanlar (Filtresiz)", "callback_data": "date|Yok"}],
@@ -127,7 +131,39 @@ async def _handle_update(update: dict, token: str, client: httpx.AsyncClient):
                 
                 # 3) Arka plan thread'inde rezervasyonu tetikle
                 _trigger_booking(chat_id, patient_id, date_str, hour_str, subtime_str, token)
-        
+
+        # Ana saat seçimi → alt-saatleri göster
+        # Payload: "hour|patient_id|date|hour"
+        elif data.startswith("hour|"):
+            parts = data.split("|")
+            if len(parts) >= 4:
+                p_id = int(parts[1])
+                date_str = parts[2]
+                hour_str = parts[3]
+
+                cache_key = f"{date_str}|{hour_str}"
+                subtimes = _probed_cache.get(p_id, {}).get(cache_key, [])
+
+                if subtimes:
+                    buttons = []
+                    for st in subtimes:
+                        cb_data = f"book|{p_id}|{date_str}|{hour_str}|{st}"
+                        if len(cb_data.encode()) <= 64:
+                            buttons.append([{
+                                "text": f"⏰ {st}",
+                                "callback_data": cb_data
+                            }])
+                    if buttons:
+                        await _send_buttons(
+                            client, token, chat_id,
+                            f"📅 <b>{date_str}</b> — <b>{hour_str}</b> bloğu\n\nAlt saat seçin:",
+                            buttons
+                        )
+                    else:
+                        await _send_text(client, token, chat_id, f"❌ {date_str} {hour_str} için alt-saat bulunamadı.")
+                else:
+                    await _send_text(client, token, chat_id, f"❌ {date_str} {hour_str} için alt-saat bilgisi bulunamadı. Veriler güncel olmayabilir.")
+
         # State makinesi - FSM Butonları
         elif data.startswith("pat|") and chat_id in user_states and user_states[chat_id]["step"] == "WAIT_PATIENT":
             parts = data.split("|")

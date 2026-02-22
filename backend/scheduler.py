@@ -130,24 +130,36 @@ async def _handle_monitor_result(monitor: dict, patient: dict, result: dict, act
             send_telegram_message_sync("\n".join(lines))
 
     elif action_type == "ask_telegram":
-        # Butonlarla Telegram'a gönder — kullanıcı seçsin
+        # İki adımlı seçim: önce ana saatler, kullanıcı seçince alt-saatler
         if not filtered:
             send_telegram_message_sync(
                 f"🔍 {pat_name} | {search_text}\nArama yapıldı ancak filtrelerinize uygun alt-saat bulunamadı."
             )
             return
 
-        text = f"🩺 <b>Müsait Randevular Bulundu!</b>\n👤 {pat_name} | 🏥 {search_text}\n\nBir saate tıklayarak randevu alabilirsiniz:"
+        # Alt-saatleri cache'e yaz (telegram_bot.py okuyacak)
+        from backend.telegram_bot import _probed_cache
+        p_id = patient["id"]
+        _probed_cache[p_id] = {}
+        for item in filtered:
+            cache_key = f"{item['date']}|{item['hour']}"
+            _probed_cache[p_id][cache_key] = item["subtimes"]
+
+        # Ana saat butonlarını oluştur (tarih + ana saat)
+        text = (
+            f"🩺 <b>Müsait Randevular Bulundu!</b>\n"
+            f"👤 {pat_name} | 🏥 {search_text}\n\n"
+            f"Bir ana saat seçin, ardından alt-saatler gösterilecek:"
+        )
         buttons = []
         for item in filtered:
-            for st in item["subtimes"]:
-                cb_data = f"book|{patient['id']}|{item['date']}|{item['hour']}|{st}"
-                # Telegram callback_data max 64 byte
-                if len(cb_data.encode()) <= 64:
-                    buttons.append([{
-                        "text": f"📅 {item['date']} ⏰ {st}",
-                        "callback_data": cb_data
-                    }])
+            n_subs = len(item["subtimes"])
+            cb_data = f"hour|{p_id}|{item['date']}|{item['hour']}"
+            if len(cb_data.encode()) <= 64:
+                buttons.append([{
+                    "text": f"📅 {item['date']} 🕐 {item['hour']} ({n_subs} alt saat)",
+                    "callback_data": cb_data
+                }])
         if buttons:
             send_notification_with_buttons_sync(text, buttons)
         else:
