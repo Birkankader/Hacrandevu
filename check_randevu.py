@@ -2154,6 +2154,386 @@ class HacettepeBot:
             return "POSSIBLY_AVAILABLE"
         return "UNKNOWN"
 
+    # ── Randevu Alma (Booking) ──
+
+    def _find_and_click_slot(self, page, target_date, target_time):
+        """Belirli tarih+saatteki yeşil slot'u DOM'dan bulup tıklar.
+
+        Returns:
+            bool — tıklama başarılı mı
+        """
+        self._emit("booking", f"[RANDEVU] Slot tıklanıyor: {target_date} {target_time}")
+
+        clicked = page.evaluate("""(args) => {
+            var targetDate = args.targetDate;
+            var targetTime = args.targetTime;
+            var timeRe = /(\d{1,2})[:.:](\d{2})/;
+
+            var monthMap = {'oca':'01','şub':'02','sub':'02','mar':'03','nis':'04',
+                'may':'05','haz':'06','tem':'07','ağu':'08','agu':'08',
+                'eyl':'09','eki':'10','kas':'11','ara':'12'};
+            var curYear = new Date().getFullYear();
+
+            function parseTrDate(text) {
+                var m = text.trim().match(/(\d{1,2})\s+([a-zçğıöşüA-ZÇĞİÖŞÜ]+)/i);
+                if (m) {
+                    var day = m[1].padStart(2,'0');
+                    var mon = monthMap[m[2].substring(0,3).toLowerCase()];
+                    if (mon) return day + '.' + mon + '.' + curYear;
+                }
+                return '';
+            }
+
+            function classifyColor(bgColor, el) {
+                var cls = (el.className || '').toLowerCase();
+                if (/green|available|acik|açık|success|musait/.test(cls)) return 'açık';
+                if (/red|full|dolu|danger|occupied/.test(cls)) return 'dolu';
+                if (/gr[ae]y|closed|kapal|disabled/.test(cls)) return 'kapalı';
+                var m = bgColor.match(/rgba?\\((\d+),\\s*(\d+),\\s*(\d+)/);
+                if (!m) return 'bilinmiyor';
+                var r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+                var maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+                if (minC > 230) return 'bos';
+                if (g > r + 30 && g > b + 30) return 'açık';
+                if (r > g + 30 && r > b + 30) return 'dolu';
+                return 'bilinmiyor';
+            }
+
+            function collectAllElements(root, result) {
+                if (!root) return;
+                var children = root.children || root.childNodes || [];
+                for (var i = 0; i < children.length; i++) {
+                    var child = children[i];
+                    if (child.nodeType === 1) {
+                        result.push(child);
+                        if (child.shadowRoot) collectAllElements(child.shadowRoot, result);
+                        collectAllElements(child, result);
+                    }
+                }
+            }
+
+            // Tarih başlıklarını topla
+            var allEls = [];
+            collectAllElements(document.body, allEls);
+
+            var dateHeaders = [];
+            var dateHdrRe = /^\\s*\\d{1,2}\\s+[A-Za-zçğıöşüÇĞİÖŞÜ]+\\s*$/;
+            for (var h = 0; h < allEls.length; h++) {
+                var htxt = (allEls[h].textContent || '').trim();
+                if (dateHdrRe.test(htxt) && htxt.length < 30) {
+                    var hrect = allEls[h].getBoundingClientRect();
+                    if (hrect.width > 0 && hrect.height > 0) {
+                        var pd = parseTrDate(htxt);
+                        if (pd) dateHeaders.push({date: pd, centerX: hrect.left + hrect.width / 2});
+                    }
+                }
+            }
+
+            // Hedef slot'u bul ve tıkla
+            var visited = {};
+            for (var i = 0; i < allEls.length; i++) {
+                var el = allEls[i];
+                var rawText = el.textContent || '';
+                if (rawText.length > 40) continue;
+                var text = rawText.trim();
+                if (!text) continue;
+
+                var tm = text.match(timeRe);
+                if (!tm) continue;
+
+                var rect = el.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) continue;
+                var posKey = Math.round(rect.left) + ',' + Math.round(rect.top);
+                if (visited[posKey]) continue;
+                visited[posKey] = true;
+
+                var time = tm[1].padStart(2,'0') + ':' + tm[2];
+                if (time !== targetTime) continue;
+
+                // Renk kontrolü — sadece yeşil (açık) olanları tıkla
+                var bg = '';
+                var checkEl = el;
+                var depth = 0;
+                while (depth < 6) {
+                    if (!checkEl) break;
+                    var style = window.getComputedStyle(checkEl);
+                    bg = style.backgroundColor;
+                    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') break;
+                    checkEl = checkEl.parentElement || (checkEl.getRootNode && checkEl.getRootNode().host);
+                    depth++;
+                }
+                var status = classifyColor(bg || '', el);
+                if (status !== 'açık') continue;
+
+                // Tarih eşleştirme
+                var date = '';
+                var cellCX = rect.left + rect.width / 2;
+                var minDist = Infinity;
+                for (var d = 0; d < dateHeaders.length; d++) {
+                    var dist = Math.abs(cellCX - dateHeaders[d].centerX);
+                    if (dist < minDist) { minDist = dist; date = dateHeaders[d].date; }
+                }
+
+                if (date !== targetDate) continue;
+
+                // Bu slot hedef! Tıkla
+                el.scrollIntoView({block: 'center'});
+                el.click();
+                return {clicked: true, date: date, time: time};
+            }
+            return {clicked: false};
+        }""", {"targetDate": target_date, "targetTime": target_time})
+
+        if clicked and clicked.get("clicked"):
+            self._emit("booking", f"[RANDEVU] Slot tıklandı: {target_date} {target_time}")
+            return True
+        else:
+            self._emit("booking", f"[RANDEVU] Slot bulunamadı veya tıklanamadı: {target_date} {target_time}")
+            return False
+
+    def _handle_booking_dialog(self, page):
+        """Slot tıklandıktan sonra açılan onay dialogunu handle eder.
+
+        Hacettepe portalı tipik olarak:
+        - Onay dialogu açar ("Randevu almak istediğinize emin misiniz?")
+        - "Evet" / "Onayla" / "Randevu Al" butonu
+        - Bazen ek bilgi formu (telefon, e-posta)
+
+        Returns:
+            dict — {"success": bool, "message": str}
+        """
+        self._emit("booking", "[RANDEVU] Onay dialogu bekleniyor...")
+        self._cancellable_sleep(2)
+        self._screenshot(page, "booking-after-click")
+
+        # Dialog / overlay açıldı mı kontrol et
+        dialog = None
+        for attempt in range(10):
+            self._check_cancelled()
+            try:
+                d = page.locator("vaadin-dialog-overlay")
+                if d.count() > 0 and d.first.is_visible():
+                    dialog = d.first
+                    break
+            except Exception:
+                pass
+
+            # Alternatif: herhangi bir modal/popup
+            try:
+                for sel in ['[role="dialog"]', '.modal', '.popup', '[class*="dialog"]', '[class*="confirm"]']:
+                    alt = page.locator(sel)
+                    if alt.count() > 0 and alt.first.is_visible():
+                        dialog = alt.first
+                        break
+                if dialog:
+                    break
+            except Exception:
+                pass
+
+            self._cancellable_sleep(1)
+
+        if not dialog:
+            # Dialog açılmadıysa, sayfa içeriğini kontrol et
+            self._emit("booking", "[RANDEVU] Dialog açılmadı, sayfa durumu kontrol ediliyor...")
+            self._screenshot(page, "booking-no-dialog")
+            # Belki direkt randevu alındı?
+            try:
+                body_text = page.locator("body").inner_text()
+                if re.search(r"randevu.*alın|başarılı|onaylandı|kaydedildi", body_text, re.IGNORECASE):
+                    return {"success": True, "message": "Randevu alındı (dialog olmadan)"}
+            except Exception:
+                pass
+            return {"success": False, "message": "Onay dialogu açılmadı"}
+
+        self._emit("booking", "[RANDEVU] Dialog açıldı, onay aranıyor...")
+        self._screenshot(page, "booking-dialog")
+
+        # Dialog içeriğini oku
+        try:
+            dialog_text = dialog.inner_text()
+            self._emit("booking", f"[RANDEVU] Dialog içeriği: {dialog_text[:200]}")
+        except Exception:
+            dialog_text = ""
+
+        # Bilgi formu varsa doldur (telefon, e-posta)
+        cfg = self._cfg
+        try:
+            phone_input = dialog.locator('input[placeholder*="5"], input[type="tel"]').first
+            if phone_input.count() > 0 and phone_input.is_visible():
+                phone = cfg.get("phone", "")
+                if phone:
+                    phone_input.fill(phone)
+                    self._emit("booking", f"[RANDEVU] Telefon girildi: {phone[:4]}****")
+        except Exception:
+            pass
+
+        try:
+            email_input = dialog.locator('input[placeholder*="@"], input[type="email"]').first
+            if email_input.count() > 0 and email_input.is_visible():
+                email = cfg.get("email", "")
+                if email:
+                    email_input.fill(email)
+                    self._emit("booking", f"[RANDEVU] E-posta girildi")
+        except Exception:
+            pass
+
+        # Onay butonunu bul ve tıkla
+        confirm_btn = None
+        confirm_keywords = ["evet", "onayla", "randevu al", "kaydet", "tamam", "kabul", "devam"]
+        cancel_keywords = ["hayır", "iptal", "vazgeç", "kapat"]
+
+        try:
+            buttons = dialog.locator("vaadin-button, button").all()
+            for btn in buttons:
+                try:
+                    btn_text = (btn.text_content() or "").strip().lower()
+                    if not btn_text:
+                        continue
+                    # İptal butonu değilse ve onay keyword'ü içeriyorsa
+                    is_cancel = any(kw in btn_text for kw in cancel_keywords)
+                    is_confirm = any(kw in btn_text for kw in confirm_keywords)
+                    if is_confirm and not is_cancel:
+                        confirm_btn = btn
+                        self._emit("booking", f"[RANDEVU] Onay butonu bulundu: '{btn_text}'")
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # Fallback: primary/theme butonu
+        if not confirm_btn:
+            try:
+                for sel in [
+                    'vaadin-button[theme*="primary"]',
+                    'button[class*="primary"]',
+                    'button[class*="confirm"]',
+                    'vaadin-button:not([theme*="error"]):not([theme*="tertiary"])',
+                ]:
+                    btn = dialog.locator(sel).first
+                    if btn.count() > 0 and btn.is_visible():
+                        confirm_btn = btn
+                        self._emit("booking", f"[RANDEVU] Onay butonu (fallback): {sel}")
+                        break
+            except Exception:
+                pass
+
+        if not confirm_btn:
+            self._emit("booking", "[RANDEVU] Onay butonu bulunamadı!")
+            self._screenshot(page, "booking-no-confirm-btn")
+            return {"success": False, "message": "Onay butonu bulunamadı"}
+
+        # Onay butonuna tıkla
+        try:
+            confirm_btn.click(timeout=5000)
+            self._emit("booking", "[RANDEVU] Onay butonuna tıklandı!")
+        except Exception as e:
+            self._emit("booking", f"[RANDEVU] Onay tıklama hatası: {e}")
+            try:
+                confirm_btn.evaluate("el => el.click()")
+            except Exception:
+                return {"success": False, "message": f"Onay tıklama hatası: {e}"}
+
+        self._cancellable_sleep(3)
+        self._screenshot(page, "booking-after-confirm")
+
+        # İkinci onay dialogu olabilir
+        try:
+            d2 = page.locator("vaadin-dialog-overlay")
+            if d2.count() > 0 and d2.first.is_visible():
+                d2_text = d2.first.inner_text()
+                self._emit("booking", f"[RANDEVU] İkinci dialog: {d2_text[:200]}")
+                self._screenshot(page, "booking-second-dialog")
+
+                # İkinci dialogda da onay butonu ara
+                buttons2 = d2.first.locator("vaadin-button, button").all()
+                for btn in buttons2:
+                    try:
+                        btn_text = (btn.text_content() or "").strip().lower()
+                        is_cancel = any(kw in btn_text for kw in cancel_keywords)
+                        is_confirm = any(kw in btn_text for kw in confirm_keywords)
+                        if is_confirm and not is_cancel:
+                            btn.click(timeout=5000)
+                            self._emit("booking", f"[RANDEVU] İkinci onay tıklandı: '{btn_text}'")
+                            self._cancellable_sleep(3)
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        self._screenshot(page, "booking-final")
+
+        # Sonucu kontrol et
+        try:
+            body_text = page.locator("body").inner_text()
+            if re.search(r"randevu.*alın|başarılı|onaylandı|kaydedildi|randevunuz.*oluştur", body_text, re.IGNORECASE):
+                self._emit("booking", "[RANDEVU] *** RANDEVU BAŞARIYLA ALINDI! ***")
+                return {"success": True, "message": "Randevu başarıyla alındı!"}
+            if re.search(r"hata|başarısız|alınamadı|iptal|dolu", body_text, re.IGNORECASE):
+                self._emit("booking", "[RANDEVU] Randevu alınamadı.")
+                return {"success": False, "message": "Randevu alınamadı — hata veya dolu"}
+        except Exception:
+            pass
+
+        # Belirsiz — dialog kapandıysa muhtemelen başarılı
+        try:
+            remaining = page.locator("vaadin-dialog-overlay")
+            if remaining.count() == 0:
+                self._emit("booking", "[RANDEVU] Dialog kapandı — randevu muhtemelen alındı")
+                return {"success": True, "message": "Dialog kapandı — randevu muhtemelen alındı"}
+        except Exception:
+            pass
+
+        return {"success": False, "message": "Sonuç belirsiz"}
+
+    def _book_furthest_slot(self, page, available_slots):
+        """Mevcut açık slotlar arasından en uzak tarihtekini seçip randevu alır.
+
+        Args:
+            page: Playwright page
+            available_slots: _extract_appointments'tan gelen available_slots listesi
+
+        Returns:
+            dict — {"success": bool, "message": str, "slot": dict|None}
+        """
+        if not available_slots:
+            return {"success": False, "message": "Açık slot yok", "slot": None}
+
+        # Slotları tarihe göre sırala — en uzak (en geç) tarih
+        def slot_sort_key(slot):
+            date_str = slot.get("date", "")
+            time_str = slot.get("time", "00:00")
+            try:
+                parts = date_str.split(".")
+                if len(parts) == 3:
+                    return (int(parts[2]), int(parts[1]), int(parts[0]), time_str)
+            except Exception:
+                pass
+            return (0, 0, 0, time_str)
+
+        sorted_slots = sorted(available_slots, key=slot_sort_key, reverse=True)
+        target = sorted_slots[0]
+
+        self._emit("booking", f"[RANDEVU] En uzak slot seçildi: {target['date']} {target['time']}")
+
+        # Slot'u tıkla
+        if not self._find_and_click_slot(page, target["date"], target["time"]):
+            # İlk slot başarısızsa diğerlerini dene
+            for fallback in sorted_slots[1:]:
+                self._check_cancelled()
+                self._emit("booking", f"[RANDEVU] Alternatif deneniyor: {fallback['date']} {fallback['time']}")
+                if self._find_and_click_slot(page, fallback["date"], fallback["time"]):
+                    target = fallback
+                    break
+            else:
+                return {"success": False, "message": "Hiçbir slot tıklanamadı", "slot": None}
+
+        # Onay dialogunu handle et
+        result = self._handle_booking_dialog(page)
+        result["slot"] = target
+        return result
+
     def _format_slots(self, available_slots):
         """Slot listesini okunabilir metne çevirir.
 
@@ -2731,11 +3111,14 @@ class HacettepeBot:
         handle_info_dialog(page, cfg["phone"], cfg["email"])
         return True
 
-    def _search_flow(self, page, search_text=None, randevu_type=None) -> int:
-        """Arama + tip seçimi + randevu çıkarma + alternatif tarama.
+    def _search_flow(self, page, search_text=None, randevu_type=None, book=False) -> int:
+        """Arama + tip seçimi + randevu çıkarma + alternatif tarama + opsiyonel randevu alma.
+
+        Args:
+            book: True ise en uzak açık slottan randevu almayı dener
 
         Returns:
-            0 — müsait randevu bulundu
+            0 — müsait randevu bulundu (veya randevu alındı)
             2 — uygun randevu yok
             3 — belirsiz durum
         """
@@ -2880,6 +3263,52 @@ class HacettepeBot:
                 if r["status"] == "AVAILABLE":
                     avail_details.append(f"{r['name']}: {r['formatted']}")
             self._emit("result", f"[{ts}] *** MÜSAİT RANDEVU: {'; '.join(avail_details)} ***")
+
+            # ── Randevu Alma ──
+            if book:
+                self._emit("booking", "[RANDEVU] Randevu alma modu aktif — en uzak slot seçiliyor...")
+                # İlk alternatifin slotlarını kullan (şu an sayfada görünen)
+                # En son taranan alternatifte kalıyoruz, onun slotlarını deneyelim
+                # Ama en iyi yaklaşım: tüm alternatiflerin slotlarından en uzağı bul
+                all_available = []
+                for r in all_results:
+                    if r["status"] == "AVAILABLE":
+                        for slot in r["appointments"].get("available_slots", []):
+                            slot["_alt_name"] = r["name"]
+                            all_available.append(slot)
+
+                if all_available:
+                    # En uzak slot hangi alternatifte?
+                    def slot_sort_key(s):
+                        d = s.get("date", "")
+                        t = s.get("time", "00:00")
+                        try:
+                            parts = d.split(".")
+                            if len(parts) == 3:
+                                return (int(parts[2]), int(parts[1]), int(parts[0]), t)
+                        except Exception:
+                            pass
+                        return (0, 0, 0, t)
+
+                    all_available.sort(key=slot_sort_key, reverse=True)
+                    best = all_available[0]
+                    best_alt = best.get("_alt_name", "")
+
+                    # Eğer best slot şu an sayfada görünenden farklı bir alternatifte ise,
+                    # o alternatifi tekrar seç
+                    last_scanned = all_results[-1]["name"] if all_results else ""
+                    if best_alt and best_alt != last_scanned:
+                        self._emit("booking", f"[RANDEVU] '{best_alt}' alternatifine geçiliyor...")
+                        self._select_unit_combo_option(page, best_alt)
+                        self._cancellable_sleep(2)
+
+                    booking_result = self._book_furthest_slot(page, [s for s in all_available if s.get("_alt_name") == best_alt])
+                    self.result["booking"] = booking_result
+                    if booking_result.get("success"):
+                        self._emit("booking", f"[RANDEVU] *** RANDEVU ALINDI: {best.get('date')} {best.get('time')} ***")
+                    else:
+                        self._emit("booking", f"[RANDEVU] Randevu alınamadı: {booking_result.get('message')}")
+
             return 0
         if overall_status == "NOT_AVAILABLE":
             self._emit("result", f"[{ts}] Hiçbir alternatifde uygun randevu bulunamadı.")
@@ -2887,7 +3316,7 @@ class HacettepeBot:
         self._emit("result", f"[{ts}] Durum belirsiz → artifacts/last-check.png")
         return 3
 
-    def run_with_page(self, page, skip_login=False, search_text=None, randevu_type=None) -> int:
+    def run_with_page(self, page, skip_login=False, search_text=None, randevu_type=None, book=False) -> int:
         """SessionManager'dan gelen page ile çalışır.
 
         Args:
@@ -2895,6 +3324,7 @@ class HacettepeBot:
             skip_login: True ise login atlanır (mevcut session kullanılır)
             search_text: Arama metni (None ise cfg'den alınır)
             randevu_type: Randevu tipi (None ise cfg'den alınır)
+            book: True ise en uzak açık slottan randevu almayı dener
 
         Returns:
             0 — müsait randevu bulundu
@@ -2913,7 +3343,7 @@ class HacettepeBot:
             # Session mevcut — direkt arama dene, başarısız olursa login'e düş
             self._emit("init", "[BILGI] Mevcut oturum kullanılıyor, login atlanıyor...")
 
-        return self._search_flow(page, search_text, randevu_type)
+        return self._search_flow(page, search_text, randevu_type, book=book)
 
     def _flow(self, page) -> int:
         """Geriye uyumluluk — login + search tek çağrıda."""

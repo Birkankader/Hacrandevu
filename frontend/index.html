@@ -85,14 +85,24 @@
                         <option value="internet sonuç">Internet Sonuc</option>
                     </select>
                 </div>
-                <button onclick="startSearch()" id="btnSearch"
-                        class="w-full bg-hacettepe text-white py-3 rounded-lg font-medium hover:bg-hacettepe-dark transition flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    Randevu Ara
-                </button>
+                <div class="flex gap-3" id="actionButtons">
+                    <button onclick="startSearch()" id="btnSearch"
+                            class="flex-1 bg-hacettepe text-white py-3 rounded-lg font-medium hover:bg-hacettepe-dark transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Randevu Ara
+                    </button>
+                    <button onclick="startBooking()" id="btnBook"
+                            class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Randevu Al
+                    </button>
+                </div>
                 <button onclick="cancelSearch()" id="btnCancel"
                         class="hidden w-full bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 transition flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

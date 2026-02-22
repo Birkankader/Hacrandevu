@@ -184,6 +184,7 @@ const STEP_LABELS = {
     analyzing: 'Slotlar analiz ediliyor',
     scanning: 'Alternatif taraniyor',
     available: 'Musait slot bulundu',
+    booking: 'Randevu aliniyor',
     result: 'Sonuc',
     retry: 'Tekrar deneniyor',
     stdout: 'Islem',
@@ -263,7 +264,7 @@ async function startSearch() {
     document.getElementById('resultSection').classList.add('hidden');
     document.getElementById('progressSteps').innerHTML = '';
     document.getElementById('progressSpinner').classList.remove('hidden');
-    document.getElementById('btnSearch').classList.add('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
     document.getElementById('btnCancel').classList.remove('hidden');
     seenSteps = new Set();
     searchInProgress = true;
@@ -332,10 +333,51 @@ function cancelSearch() {
     document.getElementById('spinnerText').textContent = 'Iptal ediliyor...';
 }
 
+async function startBooking() {
+    const patientId = document.getElementById('patientSelect').value;
+    const searchText = document.getElementById('searchText').value.trim();
+
+    if (!patientId) {
+        alert('Lutfen bir hasta secin.');
+        return;
+    }
+    if (!searchText) {
+        alert('Lutfen doktor veya birim adi girin.');
+        return;
+    }
+
+    // UI hazirla
+    document.getElementById('progressSection').classList.remove('hidden');
+    document.getElementById('resultSection').classList.add('hidden');
+    document.getElementById('progressSteps').innerHTML = '';
+    document.getElementById('progressSpinner').classList.remove('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
+    document.getElementById('btnCancel').classList.remove('hidden');
+    seenSteps = new Set();
+    searchInProgress = true;
+
+    try {
+        await ensureWsConnection();
+    } catch (err) {
+        addProgressStep('error', err.message);
+        finishSearch();
+        return;
+    }
+
+    const randevuType = document.getElementById('randevuType').value;
+    ws.send(JSON.stringify({
+        action: 'book',
+        patient_id: parseInt(patientId),
+        search_text: searchText,
+        randevu_type: randevuType,
+    }));
+}
+
 function finishSearch() {
     document.getElementById('progressSpinner').classList.add('hidden');
     document.getElementById('btnCancel').classList.add('hidden');
     document.getElementById('btnCancel').disabled = false;
+    document.getElementById('actionButtons').classList.remove('hidden');
     document.getElementById('btnSearch').classList.remove('hidden');
     searchInProgress = false;
     // WS'yi kapatma — session persistence icin acik tut
@@ -519,6 +561,31 @@ function showResult(data) {
             total.textContent = `Toplam: ${slots.total}`;
             slotSummary.appendChild(total);
         }
+    }
+
+    // Booking sonucu
+    const booking = data.booking;
+    if (booking) {
+        const bookDiv = document.createElement('div');
+        const bookSuccess = booking.success;
+        bookDiv.className = `mt-4 p-4 rounded-lg border ${bookSuccess ? 'bg-blue-50 border-blue-300' : 'bg-yellow-50 border-yellow-300'}`;
+        const slot = booking.slot;
+        const slotInfo = slot ? `${slot.date} ${slot.time}` : '';
+        bookDiv.innerHTML = `
+            <div class="flex items-center gap-2 mb-1">
+                <svg class="w-5 h-5 ${bookSuccess ? 'text-blue-600' : 'text-yellow-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="${bookSuccess ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z'}"/>
+                </svg>
+                <span class="font-semibold ${bookSuccess ? 'text-blue-700' : 'text-yellow-700'}">
+                    ${bookSuccess ? 'Randevu Alindi!' : 'Randevu Alinamadi'}
+                </span>
+            </div>
+            <p class="text-sm ${bookSuccess ? 'text-blue-600' : 'text-yellow-600'}">
+                ${slotInfo ? slotInfo + ' — ' : ''}${booking.message || ''}
+            </p>
+        `;
+        altList.parentNode.insertBefore(bookDiv, altList.nextSibling);
     }
 
     // Screenshot link

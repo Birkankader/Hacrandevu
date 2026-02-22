@@ -152,11 +152,12 @@ async def ws_search(ws: WebSocket):
                     await ws.send_json({"type": "error", "message": "Hasta bulunamadı."})
                 continue
 
-            if action != "search":
+            if action not in ("search", "book"):
                 await ws.send_json({"type": "error", "message": f"Bilinmeyen action: {action}"})
                 continue
 
-            # ── Search action ──
+            # ── Search / Book action ──
+            book_mode = action == "book"
             patient_id = msg.get("patient_id")
             search_text = msg.get("search_text", "")
             randevu_type = msg.get("randevu_type", "internet randevu")
@@ -177,7 +178,8 @@ async def ws_search(ws: WebSocket):
                 "randevu_type": randevu_type,
             }
 
-            await ws.send_json({"type": "status", "step": "init", "message": "Bot başlatılıyor..."})
+            init_msg = "Randevu alma başlatılıyor..." if book_mode else "Bot başlatılıyor..."
+            await ws.send_json({"type": "status", "step": "init", "message": init_msg})
 
             loop = asyncio.get_event_loop()
             cancel_event = threading.Event()
@@ -200,7 +202,7 @@ async def ws_search(ws: WebSocket):
             
             result = await loop.run_in_executor(
                 executor,
-                lambda: run_bot_with_session(bot_config, status_callback, cancel_event=ce),
+                lambda: run_bot_with_session(bot_config, status_callback, cancel_event=ce, book=book_mode),
             )
 
             cancel_event = None
