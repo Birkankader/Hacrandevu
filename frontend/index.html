@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HacettepeBot — Randevu Arama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hacettepe: { DEFAULT: '#16884A', dark: '#0e5c32', light: '#1da85e' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-hacettepe text-white shadow-lg">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <h1 class="text-xl font-bold">HacettepeBot</h1>
+            <div class="flex items-center gap-2 ml-auto">
+                <span id="sessionDot" class="w-2.5 h-2.5 rounded-full bg-gray-300"></span>
+                <span id="sessionText" class="text-sm text-gray-400">Oturum yok</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Hasta Secici -->
+        <section class="bg-white rounded-xl shadow-sm border p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Hasta Profili</h2>
+                <button onclick="openPatientModal()"
+                        class="text-sm bg-hacettepe text-white px-3 py-1.5 rounded-lg hover:bg-hacettepe-dark transition">
+                    + Yeni Hasta
+                </button>
+            </div>
+            <div class="flex gap-3 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm text-gray-600 mb-1">Kayitli Hasta</label>
+                    <select id="patientSelect" class="w-full border rounded-lg px-3 py-2.5 text-gray-800 bg-white focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                        <option value="">Hasta secin...</option>
+                    </select>
+                </div>
+                <button onclick="editSelectedPatient()" id="btnEdit" disabled
+                        class="px-3 py-2.5 border rounded-lg text-gray-500 hover:text-hacettepe hover:border-hacettepe transition disabled:opacity-40">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
+                <button onclick="deleteSelectedPatient()" id="btnDelete" disabled
+                        class="px-3 py-2.5 border rounded-lg text-gray-500 hover:text-red-500 hover:border-red-400 transition disabled:opacity-40">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Arama Formu -->
+        <section class="bg-white rounded-xl shadow-sm border p-5">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Randevu Arama</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Doktor / Birim Adi</label>
+                    <input type="text" id="searchText" placeholder="Orn: Ek Bina Anestezi..."
+                           class="w-full border rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Randevu Tipi</label>
+                    <select id="randevuType" class="w-full border rounded-lg px-3 py-2.5 text-gray-800 bg-white focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                        <option value="internetten randevu">Internetten Randevu</option>
+                        <option value="internet sonuç">Internet Sonuc</option>
+                    </select>
+                </div>
+                <button onclick="startSearch()" id="btnSearch"
+                        class="w-full bg-hacettepe text-white py-3 rounded-lg font-medium hover:bg-hacettepe-dark transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Randevu Ara
+                </button>
+                <button onclick="cancelSearch()" id="btnCancel"
+                        class="hidden w-full bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Aramayi Iptal Et
+                </button>
+            </div>
+        </section>
+
+        <!-- Progress Tracker -->
+        <section id="progressSection" class="hidden bg-white rounded-xl shadow-sm border p-5">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Arama Durumu</h2>
+            <div id="progressSteps" class="space-y-2"></div>
+            <div id="progressSpinner" class="flex items-center gap-2 mt-3 text-hacettepe">
+                <svg class="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                <span id="spinnerText" class="text-sm">Islem devam ediyor...</span>
+            </div>
+        </section>
+
+        <!-- Sonuc Alani -->
+        <section id="resultSection" class="hidden bg-white rounded-xl shadow-sm border p-5">
+            <div id="resultHeader" class="flex items-center gap-3 mb-4">
+                <div id="resultIcon" class="w-10 h-10 rounded-full flex items-center justify-center"></div>
+                <div>
+                    <h2 id="resultTitle" class="text-lg font-semibold"></h2>
+                    <p id="resultSubtitle" class="text-sm text-gray-500"></p>
+                </div>
+            </div>
+            <!-- Alternatifler listesi -->
+            <div id="alternativesList" class="space-y-2"></div>
+            <!-- Slot Grid (tek sonuc icin — geriye uyumluluk) -->
+            <div id="slotGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"></div>
+            <!-- Slot ozeti -->
+            <div id="slotSummary" class="mt-4 flex gap-4 text-sm"></div>
+            <!-- Screenshot link -->
+            <div id="screenshotLink" class="mt-4"></div>
+        </section>
+
+    </main>
+
+    <!-- Hasta Modal -->
+    <div id="patientModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="px-5 py-4 border-b flex items-center justify-between">
+                <h3 id="modalTitle" class="font-semibold text-lg">Yeni Hasta</h3>
+                <button onclick="closePatientModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="patientForm" onsubmit="savePatient(event)" class="p-5 space-y-4">
+                <input type="hidden" id="editPatientId" value="">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Isim</label>
+                    <input type="text" id="inputName" required placeholder="Orn: Anneanne Ayse"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">TC Kimlik No</label>
+                    <input type="text" id="inputTC" required pattern="\d{11}" maxlength="11"
+                           placeholder="11 haneli TC Kimlik No"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dogum Tarihi</label>
+                    <input type="text" id="inputBirth" required placeholder="GG.AA.YYYY"
+                           pattern="\d{1,2}\.\d{1,2}\.\d{4}"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                    <input type="text" id="inputPhone" placeholder="5xx xxx xx xx"
+                           class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-hacettepe focus:border-hacettepe outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closePatientModal()"
+                            class="flex-1 border rounded-lg py-2 text-gray-600 hover:bg-gray-50 transition">
+                        Iptal
+                    </button>
+                    <button type="submit"
+                            class="flex-1 bg-hacettepe text-white rounded-lg py-2 hover:bg-hacettepe-dark transition">
+                        Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
