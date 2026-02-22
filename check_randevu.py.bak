@@ -1,0 +1,1205 @@
+#!/usr/bin/env python3
+"""
+Hacettepe Üniversitesi Hastanesi Randevu Kontrol Botu
+Python + Scrapling (StealthyFetcher) versiyonu
+
+Stealth özellikler (Scrapling dahili):
+  - patchright: webdriver/CDP algılama bypass
+  - Canvas fingerprint gürültüsü (hide_canvas)
+  - WebRTC IP sızıntı engelleme (block_webrtc)
+  - Bézier eğrisi fare hareketi + doğal yazma
+  - Birden fazla reCAPTCHA çözüm denemesi
+
+Kullanım:
+  .venv/bin/python check_randevu.py              # Normal çalıştırma
+  .venv/bin/python check_randevu.py --setup      # İlk kurulum — reCAPTCHA güvenini oluştur
+"""
+
+import os
+import sys
+import json
+import re
+import time
+import random
+import shutil
+from datetime import datetime
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ─── Zorunlu değişken kontrolü ───
+REQUIRED_ENV = ["TC_KIMLIK_NO", "DOGUM_TARIHI"]
+for key in REQUIRED_ENV:
+    if not os.getenv(key):
+        print(f"[HATA] Eksik ortam değişkeni: {key}")
+        sys.exit(1)
+
+# ─── Yapılandırma ───
+SETUP_MODE = "--setup" in sys.argv
+SELECT_ALL_KEY = "Meta+a" if sys.platform == "darwin" else "Control+a"
+
+CFG = {
+    "target_url": os.getenv(
+        "TARGET_URL",
+        "https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-randevu/public/main?user=PUBLIC",
+    ),
+    "tc": os.getenv("TC_KIMLIK_NO"),
+    "birth_date": os.getenv("DOGUM_TARIHI"),
+    "department": os.getenv("DEPARTMENT_TEXT", ""),
+    "clinic": os.getenv("CLINIC_TEXT", ""),
+    "doctor": os.getenv("DOCTOR_TEXT", ""),
+    "headless": False if SETUP_MODE else os.getenv("HEADLESS", "true").lower() != "false",
+    "check_interval_minutes": int(os.getenv("CHECK_INTERVAL_MINUTES", "0")),
+    "timeout_ms": int(os.getenv("PAGE_TIMEOUT_MS", "45000")),
+    "save_screenshot": os.getenv("SAVE_SCREENSHOT", "true").lower() != "false",
+    "recaptcha_timeout_ms": int(os.getenv("RECAPTCHA_TIMEOUT_MS", "180000")),
+    "recaptcha_max_retries": int(os.getenv("RECAPTCHA_MAX_RETRIES", "3")),
+    "page_retries": int(os.getenv("PAGE_RETRIES", "5")),
+    "phone": os.getenv("PHONE", ""),
+    "email": os.getenv("EMAIL", ""),
+    "captcha_api_key": os.getenv("CAPTCHA_API_KEY", ""),
+}
+
+# ─── Sabit dizinler ───
+BASE_DIR = Path(__file__).parent
+ARTIFACTS_DIR = BASE_DIR / "artifacts"
+PROFILE_DIR = BASE_DIR / ".chrome-profile"
+ARTIFACTS_DIR.mkdir(exist_ok=True)
+PROFILE_DIR.mkdir(exist_ok=True)
+
+MONTHS_TR = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+]
+
+NEGATIVE_PATTERNS = [
+    re.compile(r"uygun\s*randevu\s*bulunamadı", re.IGNORECASE),
+    re.compile(r"müsait\s*randevu\s*yok", re.IGNORECASE),
+    re.compile(r"randevu\s*bulunamadı", re.IGNORECASE),
+    re.compile(r"seçilen\s*kriterlere\s*uygun\s*kayıt\s*yok", re.IGNORECASE),
+    re.compile(r"randevu\s*alamadım", re.IGNORECASE),
+]
+
+POSITIVE_PATTERNS = [
+    re.compile(r"uygun\s*randevu", re.IGNORECASE),
+    re.compile(r"müsait", re.IGNORECASE),
+    re.compile(r"randevu\s*saati", re.IGNORECASE),
+    re.compile(r"tarih\s*seç", re.IGNORECASE),
+]
+
+
+# ═══════════════════════════════════════════════════════════════
+#  Yardımcılar
+# ═══════════════════════════════════════════════════════════════
+
+def parse_birth_date(value):
+    m = re.match(r"^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$", value)
+    if not m:
+        return None
+    day, month, year = str(int(m[1])), int(m[2]), str(int(m[3]))
+    if month < 1 or month > 12:
+        return None
+    return {"day": day, "month": month, "year": year,
+            "month_padded": str(month).zfill(2), "month_name_tr": MONTHS_TR[month - 1]}
+
+
+def human_delay(lo=200, hi=800):
+    time.sleep(random.randint(lo, hi) / 1000)
+
+
+def bezier_move(page, sx, sy, ex, ey, steps=25):
+    """Bézier eğrisi ile doğal fare hareketi."""
+    cx1 = sx + (ex - sx) * random.uniform(0.2, 0.5) + random.randint(-40, 40)
+    cy1 = sy + (ey - sy) * random.uniform(0.0, 0.3) + random.randint(-30, 30)
+    cx2 = sx + (ex - sx) * random.uniform(0.5, 0.8) + random.randint(-40, 40)
+    cy2 = sy + (ey - sy) * random.uniform(0.7, 1.0) + random.randint(-30, 30)
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        x = u**3*sx + 3*u**2*t*cx1 + 3*u*t**2*cx2 + t**3*ex
+        y = u**3*sy + 3*u**2*t*cy1 + 3*u*t**2*cy2 + t**3*ey
+        page.mouse.move(x, y)
+        time.sleep(random.uniform(0.005, 0.02))
+
+
+def simulate_human(page, extensive=False):
+    """Fare hareketleri + scroll."""
+    count = random.randint(4, 9) if extensive else random.randint(2, 5)
+    for _ in range(count):
+        x1, y1 = random.randint(80, 900), random.randint(80, 550)
+        x2, y2 = random.randint(80, 900), random.randint(80, 550)
+        bezier_move(page, x1, y1, x2, y2, steps=random.randint(12, 30))
+        human_delay(80, 350)
+    page.mouse.wheel(0, random.randint(50, 200))
+    human_delay(200, 500)
+    page.mouse.wheel(0, random.randint(-120, -30))
+    human_delay(150, 400)
+
+
+def human_type(page, locator, text):
+    el = locator.first
+    el.click()
+    human_delay(100, 250)
+    el.fill("")
+    for ch in text:
+        page.keyboard.type(ch, delay=random.randint(35, 120))
+    human_delay(80, 250)
+    # Tab ile blur tetikle — Vaadin sunucuya değeri göndersin
+    page.keyboard.press("Tab")
+    human_delay(100, 300)
+
+
+def fill_first(page, candidates, value, use_human=True):
+    for loc in candidates:
+        try:
+            if loc.count() > 0:
+                if use_human:
+                    human_type(page, loc, value)
+                else:
+                    el = loc.first
+                    el.click(); el.fill(""); el.fill(value)
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def click_by_text(page, regex):
+    for strategy in [
+        lambda: page.get_by_role("button", name=regex).first,
+        lambda: page.locator("vaadin-button, button").filter(has_text=regex).first,
+    ]:
+        try:
+            el = strategy()
+            if el.count() > 0:
+                el.click(timeout=5000)
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def ensure_kvkk(page):
+    """KVKK onay kutusunu işaretle ve Vaadin'e state change bildir."""
+    clicked = False
+    try:
+        cb = page.locator("vaadin-checkbox").first
+        if cb.count() > 0:
+            cb.click(timeout=5000)
+            human_delay(200, 400)
+            clicked = True
+    except Exception:
+        pass
+    if not clicked:
+        try:
+            inp = page.locator('input[type="checkbox"]').first
+            if inp.count() > 0:
+                inp.click(timeout=5000, force=True)
+                clicked = True
+        except Exception:
+            pass
+    if not clicked:
+        try:
+            parent = page.locator('vaadin-horizontal-layout:has-text("KVKK")').first
+            if parent.count() > 0:
+                cb = parent.locator('vaadin-checkbox, input[type="checkbox"]').first
+                if cb.count() > 0:
+                    cb.click(timeout=5000)
+                    clicked = True
+        except Exception:
+            pass
+
+    if clicked:
+        # Vaadin checkbox change event'inin sunucuya ulaşmasını tetikle
+        try:
+            page.evaluate("""() => {
+                var cb = document.querySelector('vaadin-checkbox');
+                if (cb) {
+                    cb.dispatchEvent(new Event('change', {bubbles: true}));
+                    cb.dispatchEvent(new CustomEvent('checked-changed', {bubbles: true}));
+                }
+            }""")
+        except Exception:
+            pass
+        human_delay(200, 400)
+    return clicked
+
+
+def choose_dropdown_by_index(page, combo_index, option_text):
+    """Vaadin combo-box'u indeks ile seç."""
+    if not option_text:
+        return True
+    combos = page.locator("vaadin-combo-box:visible")
+    if combos.count() <= combo_index:
+        print(f"  [DEBUG] {combos.count()} combo-box bulundu, index {combo_index} yok")
+        return False
+    try:
+        combo = combos.nth(combo_index)
+        inp = combo.locator("input").first
+
+        # Input'a tıkla (combo-box açılır)
+        inp.click(timeout=5000)
+        human_delay(300, 600)
+        # Temizle
+        inp.press(SELECT_ALL_KEY)
+        inp.press("Backspace")
+        human_delay(200, 400)
+        # type() ile karakter karakter yaz (server-side filtering tetiklenir)
+        page.keyboard.type(option_text[:15], delay=80)
+        human_delay(1000, 2000)  # AJAX yanıtı bekle
+
+        # Filtrelenen sonuçtan seç
+        for sel in ['vaadin-combo-box-item', 'vaadin-combo-box-overlay [role="option"]']:
+            items = page.locator(sel).all()
+            for item in items:
+                try:
+                    txt = item.text_content() or ""
+                    if option_text.lower()[:15] in txt.lower():
+                        item.click(timeout=5000)
+                        human_delay(500, 800)
+                        return True
+                except Exception:
+                    continue
+
+        # Fallback: get_by_text
+        try:
+            match = page.get_by_text(option_text, exact=False).first
+            if match.count() > 0 and match.is_visible():
+                match.click(timeout=5000)
+                human_delay(500, 800)
+                return True
+        except Exception:
+            pass
+
+        # Son çare: Enter ile ilk sonucu al
+        page.keyboard.press("Enter")
+        human_delay(500, 800)
+        return True
+    except Exception as e:
+        print(f"  [DEBUG] Dropdown hatası: {e}")
+        return False
+
+
+def fill_combo_commit(page, combo, candidates):
+    for c in candidates:
+        if not c:
+            continue
+        try:
+            combo.click(timeout=5000)
+            combo.fill("")
+            combo.fill(str(c))
+            page.keyboard.press("Tab")
+            human_delay(300, 600)
+            val = (combo.input_value() or "").strip().lower()
+            if val == str(c).strip().lower():
+                return True
+            # Vaadin combo-box bazen Tab ile commit olmuyor,
+            # Enter ile de dene
+            if not val:
+                combo.click(timeout=5000)
+                combo.fill(str(c))
+                page.keyboard.press("Enter")
+                human_delay(300, 600)
+                val = (combo.input_value() or "").strip().lower()
+                if val == str(c).strip().lower():
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def fill_birth_combos(page, birth_date):
+    parts = parse_birth_date(birth_date)
+    if not parts:
+        return False
+    combos = page.get_by_role("combobox")
+    if combos.count() < 3:
+        return False
+    if not fill_combo_commit(page, combos.nth(0), [parts["year"]]):
+        return False
+    human_delay(300, 600)
+    if not fill_combo_commit(page, combos.nth(1),
+                             [parts["month_name_tr"], parts["month_padded"], str(parts["month"])]):
+        return False
+    human_delay(300, 600)
+    return fill_combo_commit(page, combos.nth(2), [parts["day"].zfill(2), parts["day"]])
+
+
+# ═══════════════════════════════════════════════════════════════
+#  reCAPTCHA İşleyici
+# ═══════════════════════════════════════════════════════════════
+
+def _recaptcha_present(page):
+    sel = 'iframe[title*="reCAPTCHA" i], iframe[src*="recaptcha" i]'
+    return page.locator(sel).count() > 0
+
+
+def _try_auto_solve(page, attempt: int) -> bool:
+    """Tek bir otomatik reCAPTCHA çözme denemesi."""
+    sel = 'iframe[title*="reCAPTCHA" i], iframe[src*="recaptcha" i]'
+
+    print(f"  [Deneme {attempt}] Fare hareketi simüle ediliyor...")
+    try:
+        simulate_human(page, extensive=True)
+    except Exception:
+        print(f"  [Deneme {attempt}] Tarayıcı yanıt vermiyor.")
+        return False
+    human_delay(1000, 2500)
+
+    # reCAPTCHA checkbox'ına doğal yaklaş
+    try:
+        iframe_el = page.locator(sel).first
+        bbox = iframe_el.bounding_box()
+        if not bbox:
+            return False
+        sx, sy = random.randint(200, 700), random.randint(200, 500)
+        tx = bbox["x"] + 28 + random.uniform(-4, 4)
+        ty = bbox["y"] + 28 + random.uniform(-4, 4)
+        bezier_move(page, sx, sy, tx, ty, steps=random.randint(20, 35))
+        human_delay(300, 700)
+    except Exception:
+        pass
+
+    # Checkbox'a tıkla
+    try:
+        frame = page.frame_locator(sel).first
+        anchor = frame.locator("#recaptcha-anchor")
+        if anchor.count() == 0:
+            return False
+        anchor.click(timeout=5000)
+        print(f"  [Deneme {attempt}] Checkbox tıklandı, sonuç bekleniyor...")
+        # 8 saniye yeterli — challenge açılacaksa çoktan açılmıştır
+        frame.locator('#recaptcha-anchor[aria-checked="true"]').wait_for(timeout=8000)
+        return True
+    except Exception:
+        return False
+
+
+
+def _run_in_main_world(page, js_code):
+    """<script> tag ile ana JS world'de kod çalıştır.
+    patchright page.evaluate() izole world'de çalışır — grecaptcha/myCallback
+    ana world'de olduğu için bu yöntemi kullanıyoruz.
+    """
+    page.evaluate("""(js) => {
+        var s = document.createElement('script');
+        s.textContent = js;
+        document.head.appendChild(s);
+        document.head.removeChild(s);
+    }""", js_code)
+
+
+def _solve_with_2captcha(page, api_key) -> bool:
+    """2captcha servisi ile reCAPTCHA v2 çöz."""
+    try:
+        from twocaptcha import TwoCaptcha
+    except ImportError:
+        print("  [2captcha] 2captcha-python paketi yüklü değil.")
+        return False
+
+    # Sitekey'i sayfadan çıkar
+    sitekey = None
+    try:
+        iframe = page.locator('iframe[src*="recaptcha" i]').first
+        src = iframe.get_attribute("src") or ""
+        import urllib.parse
+        params = urllib.parse.parse_qs(urllib.parse.urlparse(src).query)
+        sitekey = params.get("k", [None])[0]
+    except Exception:
+        pass
+    if not sitekey:
+        try:
+            sitekey = page.locator("[data-sitekey]").first.get_attribute("data-sitekey")
+        except Exception:
+            pass
+    if not sitekey:
+        print("  [2captcha] Sitekey bulunamadı.")
+        return False
+
+    print("  [2captcha] Sitekey bulundu. Çözüm isteniyor... (20-60sn)")
+    try:
+        solver = TwoCaptcha(api_key)
+        solver.recaptchaTimeout = 300
+        solver.pollingInterval = 5
+        result = solver.recaptcha(sitekey=sitekey, url=page.url)
+        token = result.get("code", "") if isinstance(result, dict) else str(result)
+        if not token:
+            print("  [2captcha] Token alınamadı.")
+            return False
+        print(f"  [2captcha] Token alındı ({len(token)} karakter). Enjekte ediliyor...")
+    except Exception as e:
+        print(f"  [2captcha] Servis hatası: {e}")
+        return False
+
+    # Challenge popup açıksa kapatmayı dene (Escape tuşu)
+    # NOT: grecaptcha.reset() kullanmıyoruz çünkü token bağlamını bozar
+    try:
+        bframe = page.locator('iframe[src*="recaptcha" i][title*="challenge" i]')
+        if bframe.count() > 0:
+            page.keyboard.press("Escape")
+            time.sleep(1)
+    except Exception:
+        pass
+
+    # Token enjeksiyonu: DOM üzerinden <script> tag ile ANA JS world'de çalıştır
+    try:
+        # Token'ı DOM'a kaydet (izole world → DOM erişilebilir)
+        page.evaluate("""(token) => {
+            document.body.setAttribute('data-rc-token', token);
+            document.querySelectorAll(
+                'textarea[name="g-recaptcha-response"], #g-recaptcha-response'
+            ).forEach(el => { el.value = token; el.innerHTML = token; });
+        }""", token)
+
+        # Ana world'de token enjekte et + callback tetikle
+        _run_in_main_world(page, """(function(){
+            var token = document.body.getAttribute('data-rc-token');
+            if (!token) return;
+            var ok = false;
+            var method = '';
+
+            // Textarea'ya yaz
+            document.querySelectorAll('textarea[name="g-recaptcha-response"]')
+                .forEach(function(el){ el.value = token; });
+
+            // Yöntem 1: Vaadin element — $server.callback doğrudan ara
+            // (myCallback içindeki $0 closure referansına bağımlı olmaz)
+            var rcDiv = document.querySelector('.g-recaptcha');
+            if (rcDiv) {
+                var el = rcDiv;
+                while (el && !ok) {
+                    if (el.$server && typeof el.$server.callback === 'function') {
+                        try { el.$server.callback(token); ok = true; method = '$server.callback'; }
+                        catch(e) {}
+                    }
+                    el = el.parentElement;
+                }
+            }
+
+            // Yöntem 2: myCallback (Vaadin $0 closure kullanır)
+            if (!ok && typeof myCallback === 'function') {
+                try { myCallback(token); ok = true; method = 'myCallback'; } catch(e) {}
+            }
+
+            // Yöntem 3: data-callback attribute
+            if (!ok) {
+                var div = document.querySelector('[data-callback]');
+                if (div) {
+                    var cn = div.getAttribute('data-callback');
+                    if (cn && typeof window[cn] === 'function') {
+                        try { window[cn](token); ok = true; method = cn + '()'; } catch(e) {}
+                    }
+                }
+            }
+
+            // grecaptcha.getResponse override
+            if (typeof grecaptcha !== 'undefined') {
+                try { grecaptcha.getResponse = function(){ return token; }; } catch(e) {}
+            }
+
+            document.body.setAttribute('data-rc-result', ok ? 'OK:' + method : 'NO_CALLBACK');
+            document.body.removeAttribute('data-rc-token');
+        })();""")
+
+        time.sleep(0.5)
+        rc_result = page.evaluate("() => document.body.getAttribute('data-rc-result') || ''")
+        page.evaluate("() => document.body.removeAttribute('data-rc-result')")
+
+        if rc_result.startswith("OK"):
+            method = rc_result.split(":", 1)[1] if ":" in rc_result else "?"
+            print(f"  [2captcha] Token enjekte edildi ({method}), sunucu doğrulaması bekleniyor...")
+            time.sleep(5)
+            return True
+        else:
+            print(f"  [2captcha] Callback bulunamadı ({rc_result}). Token textarea'da.")
+            return True  # Yine de form göndermeyi dene
+    except Exception as e:
+        print(f"  [2captcha] Enjeksiyon hatası: {e}")
+        return False
+
+def _verify_recaptcha_checked(page) -> bool:
+    """reCAPTCHA checkbox'ının gerçekten checked olduğunu doğrula."""
+    try:
+        sel = 'iframe[title*="reCAPTCHA" i], iframe[src*="recaptcha" i]'
+        frame = page.frame_locator(sel).first
+        checked = frame.locator('#recaptcha-anchor[aria-checked="true"]')
+        return checked.count() > 0
+    except Exception:
+        return False
+
+
+def _notify_user(message):
+    """macOS bildirimi gönder (sesli)."""
+    if sys.platform == "darwin":
+        try:
+            import subprocess
+            subprocess.Popen([
+                "osascript", "-e",
+                f'display notification "{message}" with title "HacettepeBot" sound name "Glass"'
+            ])
+        except Exception:
+            pass
+    print(f"\a")  # Terminal bell
+
+
+def _dismiss_challenge(page):
+    """reCAPTCHA challenge popup'ını kapat ve widget'ı sıfırla."""
+    try:
+        page.keyboard.press("Escape")
+        time.sleep(0.5)
+        bframe = page.locator('iframe[src*="recaptcha" i][title*="challenge" i]')
+        if bframe.count() > 0:
+            page.mouse.click(100, 100)
+            time.sleep(0.5)
+    except Exception:
+        pass
+    try:
+        _run_in_main_world(page, """(function(){
+            if (typeof grecaptcha !== 'undefined') {
+                try { grecaptcha.reset(); } catch(e) {}
+            }
+        })();""")
+        time.sleep(1)
+    except Exception:
+        pass
+
+
+def _wait_for_manual_solve(page, timeout_s) -> bool:
+    """Kullanıcının tarayıcıda reCAPTCHA çözmesini bekle."""
+    try:
+        sel = 'iframe[title*="reCAPTCHA" i], iframe[src*="recaptcha" i]'
+        frame = page.frame_locator(sel).first
+        frame.locator('#recaptcha-anchor[aria-checked="true"]').wait_for(
+            timeout=timeout_s * 1000
+        )
+        return True
+    except Exception:
+        return False
+
+
+def handle_recaptcha(page, timeout_ms, headless, max_retries) -> bool:
+    """reCAPTCHA çözme stratejisi:
+    1. Auto-solve dene (1 deneme)
+    2. Başarısızsa → Manuel çözüm (bildiri + bekleme) [headless değilse]
+    3. Manuel de başarısızsa → 2captcha (son çare)
+    """
+    human_delay(500, 1000)
+
+    if not _recaptcha_present(page):
+        print("[BILGI] reCAPTCHA algılanmadı — stealth mod başarılı!")
+        return True
+
+    api_key = CFG.get("captcha_api_key", "")
+    print("[BILGI] reCAPTCHA algılandı. Auto-solve deneniyor...")
+
+    # ── Adım 1: Auto-solve (1 deneme) ──
+    if _try_auto_solve(page, 1):
+        time.sleep(1)
+        if _verify_recaptcha_checked(page):
+            print("[BILGI] reCAPTCHA otomatik geçildi!")
+            return True
+
+    # ── Adım 2: Manuel çözüm (headless değilse) ──
+    if not headless:
+        # Challenge'ı kapat, widget'ı sıfırla — kullanıcıya temiz checkbox göster
+        _dismiss_challenge(page)
+
+        _notify_user("reCAPTCHA çözmeniz gerekiyor!")
+        manual_timeout = min(timeout_ms // 1000, 120)
+        print(f"[BILGI] ⏳ Tarayıcıda reCAPTCHA'yı çözün ({manual_timeout}s)...")
+
+        if _wait_for_manual_solve(page, manual_timeout):
+            print("[BILGI] reCAPTCHA manuel olarak çözüldü!")
+            return True
+        print("[UYARI] Manuel çözüm zaman aşımı.")
+
+    # ── Adım 3: Kalan auto-solve denemeleri ──
+    for attempt in range(2, max_retries + 1):
+        _dismiss_challenge(page)
+        human_delay(2000, 4000)
+        try:
+            simulate_human(page, extensive=True)
+        except Exception:
+            return False
+        human_delay(1000, 2000)
+
+        if _try_auto_solve(page, attempt):
+            time.sleep(1)
+            if _verify_recaptcha_checked(page):
+                print(f"[BILGI] reCAPTCHA {attempt}. denemede otomatik geçildi!")
+                return True
+        print(f"  [Deneme {attempt}] Başarısız.")
+
+    # ── Adım 4: 2captcha (son çare) ──
+    if api_key:
+        _dismiss_challenge(page)
+        print("[BILGI] 2captcha deneniyor (son çare)...")
+        if _solve_with_2captcha(page, api_key):
+            return True
+
+    print("[UYARI] reCAPTCHA çözülemedi.")
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════
+#  Bilgi Tamamlama Dialogu
+# ═══════════════════════════════════════════════════════════════
+
+def handle_info_dialog(page, phone, email):
+    """Giriş sonrası bilgi tamamlama dialogunu doldur (Vaadin overlay)."""
+    print("[BILGI] Bilgi tamamlama dialogu kontrol ediliyor...")
+    try:
+        page.locator("vaadin-dialog-overlay").wait_for(state="attached", timeout=8000)
+        print("[BILGI] Vaadin dialog overlay bulundu!")
+    except Exception:
+        try:
+            onayla = page.get_by_role("button", name=re.compile(r"onayla", re.I))
+            if onayla.count() == 0:
+                print("[BILGI] Bilgi dialogu yok, devam.")
+                return True
+        except Exception:
+            print("[BILGI] Bilgi dialogu yok, devam.")
+            return True
+
+    time.sleep(1)
+
+    # Telefon alanını doldur
+    if phone:
+        filled = False
+        for get_field in [
+            lambda: page.locator('vaadin-dialog-overlay input[placeholder*="5"]').first,
+            lambda: page.locator('input[placeholder*="5xx"]').first,
+            lambda: page.locator('input[placeholder*="5"]').nth(
+                page.locator('input[placeholder*="5"]').count() - 1
+            ),
+            lambda: page.get_by_placeholder(re.compile(r"5xx|telefon", re.I)).first,
+        ]:
+            try:
+                field = get_field()
+                if field.count() > 0 and field.is_visible():
+                    field.click()
+                    field.fill("")
+                    field.fill(phone)
+                    print(f"[BILGI] Telefon dolduruldu: {phone[:3]}***")
+                    human_delay(300, 600)
+                    filled = True
+                    break
+            except Exception:
+                continue
+        if not filled:
+            print("[UYARI] Telefon alanı bulunamadı.")
+
+    # Email doldur
+    if email:
+        for get_field in [
+            lambda: page.locator('vaadin-dialog-overlay input[placeholder*="@"]').first,
+            lambda: page.locator('input[placeholder*="@"]').first,
+            lambda: page.get_by_placeholder(re.compile(r"@|email", re.I)).first,
+        ]:
+            try:
+                field = get_field()
+                if field.count() > 0 and field.is_visible():
+                    field.click()
+                    field.fill("")
+                    field.fill(email)
+                    print("[BILGI] Email dolduruldu.")
+                    human_delay(200, 400)
+                    break
+            except Exception:
+                continue
+
+    # Onayla butonu
+    human_delay(300, 600)
+    for get_btn in [
+        lambda: page.get_by_role("button", name=re.compile(r"onayla", re.I)).first,
+        lambda: page.locator("vaadin-dialog-overlay vaadin-button").first,
+        lambda: page.locator("vaadin-dialog-overlay button").first,
+    ]:
+        try:
+            btn = get_btn()
+            if btn.count() > 0 and btn.is_visible():
+                btn.click(timeout=5000)
+                print("[BILGI] Onayla tıklandı!")
+                # Dialog overlay'in kapanmasını bekle
+                try:
+                    page.locator("vaadin-dialog-overlay").wait_for(
+                        state="detached", timeout=15000
+                    )
+                    print("[BILGI] Dialog kapandı.")
+                except Exception:
+                    time.sleep(3)
+                    try:
+                        if page.locator("vaadin-dialog-overlay").count() > 0:
+                            page.keyboard.press("Escape")
+                            time.sleep(2)
+                    except Exception:
+                        pass
+                time.sleep(2)
+                return True
+        except Exception:
+            continue
+
+    print("[UYARI] Onayla butonu tıklanamadı.")
+    return False
+
+
+class RecaptchaFailed(Exception):
+    pass
+
+
+# ═══════════════════════════════════════════════════════════════
+#  Bot — Scrapling StealthyFetcher
+# ═══════════════════════════════════════════════════════════════
+
+class HacettepeBot:
+    def __init__(self):
+        self.result = None
+
+    def _screenshot(self, page, name):
+        try:
+            page.screenshot(path=str(ARTIFACTS_DIR / f"{name}.png"), full_page=True)
+        except Exception:
+            pass
+
+    def run_once(self) -> int:
+        """Tek kontrol — reCAPTCHA başarısız olursa temiz profil ile tekrar dener."""
+        from scrapling.fetchers import StealthyFetcher
+
+        max_retries = CFG["page_retries"]
+        print(f"[BILGI] Hedef: {CFG['target_url']}")
+        print(f"[BILGI] Mod: {'SETUP' if SETUP_MODE else 'headless=' + str(CFG['headless'])}")
+
+        for attempt in range(1, max_retries + 1):
+            # Her denemede temiz profil
+            if PROFILE_DIR.exists():
+                shutil.rmtree(PROFILE_DIR, ignore_errors=True)
+            PROFILE_DIR.mkdir(exist_ok=True)
+
+            print(f"\n[BILGI] === Deneme {attempt}/{max_retries} ===")
+
+            # page_action sonucunu paylaşmak için closure dict
+            flow_result = {"code": None, "error": None}
+
+            def page_action(page):
+                page.set_default_timeout(CFG["timeout_ms"])
+                try:
+                    code = self._flow(page)
+                    flow_result["code"] = code
+                except RecaptchaFailed:
+                    flow_result["error"] = "recaptcha"
+                except Exception as e:
+                    flow_result["error"] = str(e)
+                    try:
+                        self._screenshot(page, "error")
+                    except Exception:
+                        pass
+
+            try:
+                StealthyFetcher.fetch(
+                    CFG["target_url"],
+                    headless=CFG["headless"],
+                    block_webrtc=True,
+                    hide_canvas=True,
+                    allow_webgl=True,
+                    network_idle=True,
+                    timeout=300000,       # 5 dk — page_action içindeki tüm flow için
+                    page_action=page_action,
+                    locale="tr-TR",
+                    timezone_id="Europe/Istanbul",
+                    google_search=False,  # Hacettepe portalına Google referer gönderme
+                )
+            except Exception as e:
+                if flow_result["code"] is None and flow_result["error"] is None:
+                    flow_result["error"] = str(e)
+
+            # Sonuç değerlendirme
+            if flow_result["code"] is not None:
+                return flow_result["code"]
+            elif flow_result["error"] == "recaptcha":
+                print("[BILGI] reCAPTCHA başarısız, tekrar denenecek...")
+                if attempt < max_retries:
+                    human_delay(2000, 5000)
+                continue
+            else:
+                err = flow_result["error"] or "Bilinmeyen hata"
+                if "closed" in err.lower() or "target" in err.lower():
+                    print(f"[BILGI] Tarayıcı kapandı: {err}")
+                    if attempt < max_retries:
+                        human_delay(2000, 5000)
+                        continue
+                print(f"[HATA] {err}")
+                return 1
+
+        print("[HATA] Tüm denemeler başarısız.")
+        return 1
+
+
+    def _analyze_slots(self, page):
+        """Randevu slotlarını renk kodlarına göre analiz et.
+        Yeşil=müsait, Kırmızı=dolu, Gri=kapalı.
+        """
+        result = {"green": 0, "red": 0, "grey": 0, "total": 0, "details": []}
+
+        # Sayfa'daki tüm slot elementlerini tara
+        # Vaadin grid veya tablo hücreleri olabilir
+        try:
+            slot_data = page.evaluate("""() => {
+                const slots = {green: 0, red: 0, grey: 0, total: 0, details: []};
+
+                // Strateji 1: background-color veya color CSS'i olan hücreleri tara
+                const allElements = document.querySelectorAll(
+                    'td, th, div, span, button, vaadin-grid-cell-content, ' +
+                    '[class*="slot"], [class*="randevu"], [class*="saat"], ' +
+                    '[class*="available"], [class*="full"], [class*="closed"], ' +
+                    '[class*="green"], [class*="red"], [class*="grey"], [class*="gray"], ' +
+                    '[style*="background"], [style*="color"]'
+                );
+
+                for (const el of allElements) {
+                    const style = window.getComputedStyle(el);
+                    const bg = style.backgroundColor;
+                    const text = (el.textContent || '').trim();
+
+                    // Saat formatı içeren elementleri filtrele (08:00, 09:30 vb.)
+                    const hasTime = /\\d{1,2}[:.]\\d{2}/.test(text);
+                    const cls = (el.className || '').toLowerCase();
+
+                    // Renk sınıflandırması
+                    const isGreen = bg.includes('0, 128') || bg.includes('0, 100') ||
+                                    bg.includes('76, 175') || bg.includes('56, 142') ||
+                                    bg.includes('40, 167') || bg.includes('46, 125') ||
+                                    bg.includes('34, 139') || bg.includes('0, 150') ||
+                                    bg.includes('102, 187') || bg.includes('139, 195') ||
+                                    cls.includes('green') || cls.includes('available') ||
+                                    cls.includes('musait') || cls.includes('açık') ||
+                                    cls.includes('acik') || cls.includes('success');
+
+                    const isRed = bg.includes('255, 0') || bg.includes('244, 67') ||
+                                  bg.includes('229, 57') || bg.includes('211, 47') ||
+                                  bg.includes('183, 28') || bg.includes('255, 82') ||
+                                  bg.includes('198, 40') || bg.includes('176, 0') ||
+                                  cls.includes('red') || cls.includes('full') ||
+                                  cls.includes('dolu') || cls.includes('danger') ||
+                                  cls.includes('occupied');
+
+                    const isGrey = bg.includes('128, 128, 128') || bg.includes('158, 158') ||
+                                   bg.includes('189, 189') || bg.includes('117, 117') ||
+                                   bg.includes('96, 96') || bg.includes('150, 150') ||
+                                   bg.includes('169, 169') || bg.includes('192, 192') ||
+                                   cls.includes('grey') || cls.includes('gray') ||
+                                   cls.includes('closed') || cls.includes('kapali') ||
+                                   cls.includes('disabled') || cls.includes('inactive');
+
+                    if (hasTime || isGreen || isRed || isGrey) {
+                        if (isGreen) {
+                            slots.green++;
+                            slots.total++;
+                            slots.details.push({time: text.substring(0, 50), color: 'green', bg: bg});
+                        } else if (isRed) {
+                            slots.red++;
+                            slots.total++;
+                            slots.details.push({time: text.substring(0, 50), color: 'red', bg: bg});
+                        } else if (isGrey) {
+                            slots.grey++;
+                            slots.total++;
+                            slots.details.push({time: text.substring(0, 50), color: 'grey', bg: bg});
+                        } else if (hasTime) {
+                            // Saat var ama renk belirsiz — ekle
+                            slots.total++;
+                            slots.details.push({time: text.substring(0, 50), color: 'unknown', bg: bg});
+                        }
+                    }
+                }
+                return slots;
+            }""")
+            if slot_data:
+                result = slot_data
+                # Details'i kısalt (max 20)
+                if len(result.get("details", [])) > 20:
+                    result["details"] = result["details"][:20]
+        except Exception as e:
+            print(f"  [DEBUG] Slot analizi hatası: {e}")
+
+        return result
+
+    def _flow(self, page) -> int:
+        # ── Google ziyareti: reCAPTCHA güven cookieleri oluştur ──
+        try:
+            print("[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
+            page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=15000)
+            time.sleep(random.uniform(1.5, 3.0))
+            # Google'da biraz gezin
+            simulate_human(page, extensive=True)
+            time.sleep(random.uniform(1.0, 2.0))
+            # Hedef sayfaya git
+            page.goto(CFG["target_url"], wait_until="networkidle", timeout=30000)
+            time.sleep(2)
+        except Exception as e:
+            print(f"[UYARI] Google pre-visit hatası: {e}")
+            # Hata olursa hedef sayfaya yeniden git
+            try:
+                page.goto(CFG["target_url"], wait_until="networkidle", timeout=30000)
+                time.sleep(2)
+            except Exception:
+                pass
+
+        # ── İnsan davranışı ──
+        simulate_human(page, extensive=True)
+        time.sleep(random.uniform(1.0, 2.0))
+
+        # ── TC ──
+        print("[BILGI] TC Kimlik No dolduruluyor...")
+        tc_ok = fill_first(page, [
+            page.get_by_label(re.compile(r"(t\.?c\.?|tc).*kimlik", re.I)),
+            page.locator('input[name*="tc" i], input[id*="tc" i]'),
+            page.locator('input[placeholder*="T.C" i], input[placeholder*="Kimlik" i]'),
+            page.get_by_role("textbox", name=re.compile(r"(t\.?c\.?|tc).*kimlik", re.I)),
+        ], CFG["tc"])
+
+        # TC alanında change event tetikle (Vaadin sunucuya değeri göndersin)
+        try:
+            page.evaluate("""() => {
+                var inputs = document.querySelectorAll('input');
+                inputs.forEach(function(inp) {
+                    if (inp.value && inp.value.length >= 11) {
+                        inp.dispatchEvent(new Event('change', {bubbles: true}));
+                        inp.dispatchEvent(new Event('blur', {bubbles: true}));
+                    }
+                });
+            }""")
+        except Exception:
+            pass
+
+        simulate_human(page)
+        human_delay(300, 700)
+
+        # ── Doğum tarihi ──
+        print("[BILGI] Doğum tarihi dolduruluyor...")
+        bd_ok = fill_first(page, [
+            page.get_by_label(re.compile(r"doğum\s*tarihi", re.I)),
+            page.locator('input[name*="dog" i], input[id*="dog" i], input[name*="birth" i], input[id*="birth" i]'),
+            page.locator('input[placeholder*="Doğum" i], input[placeholder*="gg" i]'),
+            page.get_by_role("textbox", name=re.compile(r"doğum\s*tarihi", re.I)),
+        ], CFG["birth_date"])
+        if not bd_ok:
+            bd_ok = fill_birth_combos(page, CFG["birth_date"])
+
+        if not tc_ok or not bd_ok:
+            self._screenshot(page, "debug-fill-failed")
+            raise RuntimeError("TC veya doğum tarihi alanı bulunamadı.")
+        print("[BILGI] Form alanları dolduruldu.")
+        self._screenshot(page, "debug-after-fill")
+        human_delay(300, 600)
+
+        # ── KVKK ──
+        ensure_kvkk(page)
+        human_delay(300, 600)
+
+        # ── reCAPTCHA ──
+        simulate_human(page, extensive=True)
+        time.sleep(random.uniform(0.5, 1.5))
+
+        rc_ok = handle_recaptcha(
+            page, CFG["recaptcha_timeout_ms"], CFG["headless"], CFG["recaptcha_max_retries"]
+        )
+
+        if SETUP_MODE:
+            if rc_ok:
+                print("\n[SETUP] reCAPTCHA çözüldü! Profil güveni kaydedildi.")
+            else:
+                print("\n[SETUP] reCAPTCHA çözülemedi. Tekrar deneyin.")
+            return 0 if rc_ok else 1
+
+        if not rc_ok:
+            raise RecaptchaFailed("reCAPTCHA çözülemedi")
+
+        self._screenshot(page, "debug-after-recaptcha")
+
+        # reCAPTCHA callback'inin sunucuya ulaşmasını bekle
+        time.sleep(random.uniform(2.0, 3.0))
+
+        # Giriş'ten önce grecaptcha.getResponse override'ı tazele
+        # (Vaadin client-side validation getResponse() kontrol edebilir)
+        try:
+            _run_in_main_world(page, """(function(){
+                var ta = document.querySelector('textarea[name="g-recaptcha-response"]');
+                var token = ta ? ta.value : '';
+                if (token && typeof grecaptcha !== 'undefined') {
+                    grecaptcha.getResponse = function(){ return token; };
+                }
+            })();""")
+        except Exception:
+            pass
+
+        # ── Form gönder ──
+        print("[BILGI] Form gönderiliyor...")
+        submitted = False
+        # Strateji 1: Vaadin buton tıkla (force=True ile overlay bypass)
+        for get_btn in [
+            lambda: page.locator("vaadin-button").filter(has_text=re.compile(r"giriş", re.I)).first,
+            lambda: page.get_by_role("button", name=re.compile(r"giriş", re.I)).first,
+        ]:
+            try:
+                btn = get_btn()
+                if btn.count() > 0:
+                    btn.click(timeout=5000, force=True)
+                    submitted = True
+                    break
+            except Exception:
+                continue
+        # Strateji 2: click_by_text fallback
+        if not submitted:
+            submitted = click_by_text(page, re.compile(r"(devam|sorgula|giriş|ileri|randevu\s*ara)", re.I))
+        # Strateji 3: Enter tuşu
+        if not submitted:
+            try:
+                page.keyboard.press("Enter")
+                submitted = True
+                print("[BILGI] Enter tuşu ile gönderildi.")
+            except Exception:
+                pass
+        print(f"[BILGI] Giriş butonu tıklandı: {submitted}")
+        time.sleep(7)
+        self._screenshot(page, "debug-after-giris")
+
+        # Vaadin notification kontrolü (sunucu hata mesajı)
+        try:
+            notif_cards = page.locator("vaadin-notification-card")
+            if notif_cards.count() > 0:
+                notif_text = notif_cards.first.text_content() or ""
+                print(f"[BILGI] Sunucu bildirimi: {notif_text[:200]}")
+        except Exception:
+            pass
+
+        # ── Login başarılı mı kontrol et ──
+        login_ok = False
+        try:
+            post_login = page.locator("button, vaadin-button, a").filter(
+                has_text=re.compile(r"güvenli|randevularım|çıkış", re.I)
+            )
+            if post_login.count() > 0:
+                login_ok = True
+                print("[BILGI] Login başarılı — post-login göstergeler bulundu!")
+        except Exception:
+            pass
+
+        if not login_ok:
+            # reCAPTCHA iframe hâlâ varsa login sayfasındayız
+            try:
+                rc = page.locator('iframe[src*="recaptcha" i]')
+                if rc.count() > 0:
+                    # Ekstra bilgi: sayfa içeriğinden hata mesajı ara
+                    try:
+                        body_text = page.locator("body").inner_text()[:500]
+                        for line in body_text.split("\n"):
+                            line = line.strip()
+                            if not line or len(line) < 5:
+                                continue
+                            # Buton label, form label'ları filtrele
+                            if line in ("Giriş", "T.C. Kimlik", "Pasaport No", "Yıl", "Ay", "Gün"):
+                                continue
+                            if "sisteme" in line.lower() or "hata" in line.lower() or \
+                               "doğrulama" in line.lower() or "gerekli" in line.lower():
+                                print(f"[BILGI] Hata mesajı: {line[:200]}")
+                                break
+                    except Exception:
+                        pass
+                    print("[UYARI] Hâlâ login sayfasında — reCAPTCHA/giriş başarısız.")
+                    self._screenshot(page, "login-failed")
+                    raise RecaptchaFailed("Login sayfasından çıkılamadı")
+            except RecaptchaFailed:
+                raise
+            except Exception:
+                pass
+
+        # ── Bilgi tamamlama dialogu ──
+        handle_info_dialog(page, CFG["phone"], CFG["email"])
+
+        # ── Filtreler (Merkez → Bölüm → Birim/Doktor) ──
+        if CFG["department"]:
+            print(f"[BILGI] Merkez: {CFG['department']}")
+            ok = choose_dropdown_by_index(page, 0, CFG["department"])
+            print(f"[BILGI] Merkez: {'seçildi' if ok else 'seçilemedi'}")
+            time.sleep(random.uniform(2.0, 4.0))
+
+        if CFG["clinic"]:
+            print(f"[BILGI] Bölüm: {CFG['clinic']}")
+            ok = choose_dropdown_by_index(page, 1, CFG["clinic"])
+            print(f"[BILGI] Bölüm: {'seçildi' if ok else 'seçilemedi'}")
+            time.sleep(random.uniform(2.0, 4.0))
+
+        if CFG["doctor"]:
+            print(f"[BILGI] Birim/Doktor: {CFG['doctor']}")
+            ok = choose_dropdown_by_index(page, 2, CFG["doctor"])
+            print(f"[BILGI] Birim/Doktor: {'seçildi' if ok else 'seçilemedi'}")
+            time.sleep(random.uniform(2.0, 4.0))
+
+        # Sonuçları bekle
+        time.sleep(3)
+
+        # ── Sonuç: Renk kodlu slot analizi ──
+        ts = datetime.now().isoformat()
+        slot_info = self._analyze_slots(page)
+
+        try:
+            body = re.sub(r"\s+", " ", page.locator("body").inner_text()).strip()
+        except Exception:
+            body = ""
+
+        neg = any(p.search(body) for p in NEGATIVE_PATTERNS)
+        pos = any(p.search(body) for p in POSITIVE_PATTERNS)
+
+        # Slot renk analizi öncelikli
+        if slot_info["green"] > 0:
+            status = "AVAILABLE"
+        elif neg:
+            status = "NOT_AVAILABLE"
+        elif pos:
+            status = "POSSIBLY_AVAILABLE"
+        else:
+            status = "UNKNOWN"
+
+        self.result = {
+            "timestamp": ts, "status": status, "url": page.url,
+            "slots": slot_info,
+        }
+
+        (ARTIFACTS_DIR / "last-result.json").write_text(
+            json.dumps(self.result, indent=2, ensure_ascii=False) + "\n"
+        )
+        if CFG["save_screenshot"]:
+            self._screenshot(page, "last-check")
+
+        print(f"[{ts}] Slot analizi: {slot_info}")
+        if status == "AVAILABLE":
+            print(f"[{ts}] *** YEŞİL SLOT BULUNDU — RANDEVU MÜSAİT! ***")
+            return 0
+        if status == "NOT_AVAILABLE":
+            print(f"[{ts}] Uygun randevu bulunamadı.")
+            return 2
+        if status == "POSSIBLY_AVAILABLE":
+            print(f"[{ts}] *** MUHTEMEL UYGUN RANDEVU BULUNDU! ***")
+            return 0
+        print(f"[{ts}] Durum belirsiz → artifacts/last-check.png")
+        return 3
+
+    def run(self) -> int:
+        interval = CFG["check_interval_minutes"]
+        if interval > 0:
+            print(f"[BILGI] Sürekli izleme: her {interval} dk.")
+            while True:
+                try:
+                    code = self.run_once()
+                    if code == 0:
+                        print("[BILGI] Randevu bulundu! Döngü durduruluyor.")
+                        return 0
+                except Exception as e:
+                    print(f"[HATA] {e}")
+                time.sleep(interval * 60)
+        return self.run_once()
+
+
+if __name__ == "__main__":
+    sys.exit(HacettepeBot().run())

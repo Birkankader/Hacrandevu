@@ -528,7 +528,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=
     try:
         solver = TwoCaptcha(api_key)
         solver.recaptcha_timeout = 300
-        solver.polling_interval = 5
+        solver.polling_interval = 3
 
         # solver.recaptcha() bloklar — ayrı thread'de çalıştırıp cancel kontrol et
         from concurrent.futures import ThreadPoolExecutor
@@ -740,8 +740,8 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=
                 return False
 
         # ── Post-enjeksiyon doğrulama (HIZLI — token expire olmasın) ──
-        print("  [2captcha] Kısa doğrulama bekleniyor (1.5 saniye)...")
-        time.sleep(1.5)
+        print("  [2captcha] Kısa doğrulama bekleniyor (0.5 saniye)...")
+        time.sleep(0.5)
 
         # Doğrulama 1: reCAPTCHA widget checked oldu mu?
         if _verify_recaptcha_checked(page):
@@ -1361,7 +1361,10 @@ class HacettepeBot:
         if first_item is not None:
             try:
                 print(f"  [ARAMA] İlk alternatif seçiliyor: {alternatives[0][:60]}")
-                first_item.click(timeout=5000)
+                try:
+                    first_item.click(force=True, timeout=5000)
+                except Exception:
+                    first_item.evaluate("el => el.click()")
                 selected = True
                 human_delay(500, 1000)
             except Exception as e:
@@ -2270,43 +2273,53 @@ class HacettepeBot:
         return res and res.get("clicked", False)
 
     def _wait_for_dialog(self, page, timeout_s=10):
-        """Vaadin dialog overlay'in açılmasını bekler. Returns locator | None."""
-        for _ in range(timeout_s):
+        """Vaadin dialog overlay'in açılmasını (görünür olmasını) bekler."""
+        # 0.2 saniyelik daha sık kontrollerle bekleme (5x daha tepkisel)
+        max_attempts = timeout_s * 5
+        for _ in range(max_attempts):
             self._check_cancelled()
             try:
                 d = page.locator("vaadin-dialog-overlay")
                 if d.count() > 0 and d.first.is_visible():
+                    # Animasyon bitişi için ufak tampon
+                    human_delay(100, 200)
                     return d.first
             except Exception:
                 pass
-            self._cancellable_sleep(1)
+            self._cancellable_sleep(0.2)
         return None
 
     def _close_dialog(self, page):
-        """Açık dialog'u 'Vazgeç' ile kapat."""
+        """Açık dialog'u 'Vazgeç' ile kapat ve ekrandan kaybolmasını bekle."""
         try:
             d = page.locator("vaadin-dialog-overlay")
             if d.count() > 0 and d.first.is_visible():
                 # "Vazgeç" linkini/butonunu ara
-                for sel in [
-                    "a", "vaadin-button", "button",
-                ]:
+                for sel in ["a", "vaadin-button", "button"]:
                     items = d.first.locator(sel).all()
                     for item in items:
                         txt = (item.text_content() or "").strip().lower()
                         if "vazgeç" in txt or "kapat" in txt or "iptal" in txt:
                             item.click(timeout=3000)
-                            self._cancellable_sleep(1)
+                            try:
+                                d.first.wait_for(state="hidden", timeout=2000)
+                            except Exception:
+                                self._cancellable_sleep(0.3)
                             return True
                 # Fallback: Escape
                 page.keyboard.press("Escape")
-                self._cancellable_sleep(1)
+                try:
+                    d.first.wait_for(state="hidden", timeout=2000)
+                except Exception:
+                    self._cancellable_sleep(0.3)
                 return True
         except Exception:
             pass
+            
+        # Son çare Fallback
         try:
             page.keyboard.press("Escape")
-            self._cancellable_sleep(1)
+            self._cancellable_sleep(0.3)
         except Exception:
             pass
         return False
@@ -2409,7 +2422,9 @@ class HacettepeBot:
             self._emit("probing", f"[PROBE] Slot tıklanamadı: {target_date} {target_time}")
             return []
 
-        self._cancellable_sleep(2)
+        # Tıklama sonrası 2 saniyelik statik bekleme KALDIRILDI.
+        # _wait_for_dialog zaten dinamik olarak dialogun görünmesini bekler.
+        self._cancellable_sleep(0.3)
 
         dialog = self._wait_for_dialog(page, timeout_s=8)
         if not dialog:
@@ -2423,7 +2438,6 @@ class HacettepeBot:
 
         # Dialog'u kapat (Vazgeç)
         self._close_dialog(page)
-        self._cancellable_sleep(1)
 
         return subtimes
 
@@ -2911,21 +2925,29 @@ class HacettepeBot:
         """
         cfg = self._cfg
         # ── Google ziyareti: reCAPTCHA güven cookieleri oluştur ──
-        try:
-            self._emit("google_visit", "[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
-            page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=15000)
-            time.sleep(random.uniform(1.5, 3.0))
-            simulate_human(page, extensive=True)
-            time.sleep(random.uniform(1.0, 2.0))
-            page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
-            time.sleep(2)
-        except Exception as e:
-            self._emit("google_visit", f"[UYARI] Google pre-visit hatası: {e}")
+        if cfg.get("captcha_api_key"):
+            self._emit("google_visit", "[BILGI] 2Captcha API anahtarı mevcut. Google güven adımı atlanıyor (hızlı yol).")
             try:
                 page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
-                time.sleep(2)
+                time.sleep(1)
             except Exception:
                 pass
+        else:
+            try:
+                self._emit("google_visit", "[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
+                page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=15000)
+                time.sleep(random.uniform(1.5, 3.0))
+                simulate_human(page, extensive=True)
+                time.sleep(random.uniform(1.0, 2.0))
+                page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
+                time.sleep(2)
+            except Exception as e:
+                self._emit("google_visit", f"[UYARI] Google pre-visit hatası: {e}")
+                try:
+                    page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
+                    time.sleep(2)
+                except Exception:
+                    pass
 
         # ── İnsan davranışı ──
         simulate_human(page, extensive=True)
@@ -3388,8 +3410,24 @@ class HacettepeBot:
         # Booking: önce arama yap (grid'i oluştur), sonra slot'u tıkla
         if book and book_target:
             self._emit("booking", f"[RANDEVU] Arama + randevu alma: {book_target}")
-            # Aramayı yap — grid oluşsun
-            self._search_flow(page, search_text, randevu_type, probe_subtimes=False)
+            
+            # Fast-path: Eğer session yeniden kullanılmışsa (skip_login=True)
+            # ve saat blokları ekranda zaten varsa (yani bir önceki arama sonuçları duruyorsa),
+            # arama adımını pas geç.
+            needs_search = True
+            if skip_login:
+                try:
+                    has_time = page.evaluate("() => /\\d{1,2}[:.:]\\d{2}/.test(document.body ? document.body.innerText || '' : '')")
+                    if has_time:
+                        self._emit("booking", "[RANDEVU] Önceki arama sonuçları (saat blokları) ekranda mevcut, arama adımı atlanıyor (hızlı yol).")
+                        needs_search = False
+                except Exception:
+                    pass
+            
+            if needs_search:
+                # Aramayı yap — grid oluşsun
+                self._search_flow(page, search_text, randevu_type, probe_subtimes=False)
+
             # Şimdi grid'deki hedef slot'a tıkla ve onayla
             result = self._book_specific_slot(
                 page,

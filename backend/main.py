@@ -199,31 +199,36 @@ async def ws_search(ws: WebSocket):
                 except Exception:
                     pass
 
-            # Bot'u bu hastaya özel thread'de çalıştır
             ce = cancel_event
-            sm = SessionManager()
             tc = patient["tc_kimlik"]
-            executor = sm.get_executor(tc)
-
-            # search: probe_subtimes=True, book: book_target ile
             _bt = book_target if action == "book" else None
-            _probe = action == "search"  # search her zaman alt-saat keşfi yapar
+            _probe = action == "search"
 
-            result = await loop.run_in_executor(
-                executor,
-                lambda: run_bot_with_session(
-                    bot_config, status_callback, cancel_event=ce,
-                    probe_subtimes=_probe, book_target=_bt,
-                ),
-            )
+            async def run_search_async():
+                try:
+                    sm = SessionManager()
+                    executor = sm.get_executor(tc)
+                    
+                    result = await loop.run_in_executor(
+                        executor,
+                        lambda: run_bot_with_session(
+                            bot_config, status_callback, cancel_event=ce,
+                            probe_subtimes=_probe, book_target=_bt,
+                        )
+                    )
+                    await ws.send_json({"type": "result", "data": result})
 
-            cancel_event = None
-            await ws.send_json({"type": "result", "data": result})
-
-            # Session durumunu gönder
-            session_status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
-            await ws.send_json({"type": "session_status", "data": session_status})
-
+                    session_status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
+                    await ws.send_json({"type": "session_status", "data": session_status})
+                except Exception as ex:
+                    try:
+                        await ws.send_json({"type": "error", "message": f"Arka plan işlemi hatası: {str(ex)}"})
+                    except Exception:
+                        pass
+            
+            # Aramayı arka planda başlat (while döngüsünün beklemesini engeller)
+            asyncio.create_task(run_search_async())
+            
     except WebSocketDisconnect:
         if cancel_event:
             cancel_event.set()
