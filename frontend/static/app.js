@@ -202,7 +202,7 @@ function ensureWsConnection() {
             return;
         }
         if (ws) {
-            try { ws.close(); } catch (e) {}
+            try { ws.close(); } catch (e) { }
             ws = null;
         }
 
@@ -430,7 +430,7 @@ function showResult(data) {
         title.textContent = 'Musait Randevu Bulundu!';
         title.className = 'text-lg font-semibold text-green-700';
         subtitle.textContent = probedSubtimes.length > 0
-            ? `${probedSubtimes.reduce((s,p) => s + p.subtimes.length, 0)} alt-saat kesfedildi — asagidan secin`
+            ? `${probedSubtimes.reduce((s, p) => s + p.subtimes.length, 0)} alt-saat kesfedildi — asagidan secin`
             : `${totalAvailable} musait slot`;
     } else if (status === 'NOT_AVAILABLE') {
         icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-red-100 text-red-600';
@@ -635,3 +635,143 @@ function showResult(data) {
 
 // ─── Init ───
 loadPatients();
+
+// ─── Shadow Mode (Arka Plan Taraması) Yönetimi ───
+
+function openShadowModal() {
+    document.getElementById('shadowModal').classList.remove('hidden');
+    loadMonitors();
+    populateMonitorPatients();
+}
+
+function closeShadowModal() {
+    document.getElementById('shadowModal').classList.add('hidden');
+    document.getElementById('monitorForm').reset();
+}
+
+function populateMonitorPatients() {
+    const select = document.getElementById('monitorPatient');
+    select.innerHTML = '';
+
+    if (patients.length === 0) {
+        select.innerHTML = '<option value="" disabled selected>Önce bir hasta profili oluşturun</option>';
+        return;
+    }
+
+    patients.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (${p.tc_kimlik})`;
+        select.appendChild(opt);
+    });
+}
+
+async function loadMonitors() {
+    const listEl = document.getElementById('activeMonitorsList');
+    listEl.innerHTML = '<div class="text-sm text-gray-500 italic">Yükleniyor...</div>';
+
+    try {
+        const res = await fetch('/api/monitors');
+        const monitors = await res.json();
+
+        if (monitors.length === 0) {
+            listEl.innerHTML = '<div class="text-sm text-gray-500 italic">Şu an çalışan arka plan taraması yok.</div>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        monitors.forEach(m => {
+            const patient = patients.find(p => p.id === m.patient_id);
+            const patName = patient ? patient.name : `Hasta #${m.patient_id}`;
+            const statusColor = m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
+            const statusText = m.is_active ? 'Aktif' : 'Durduruldu';
+
+            const actionLabels = {
+                'notify': '💬 Sadece Bildirim',
+                'auto_book': '⚡ Otomatik Al',
+                'ask_telegram': '🤖 Telegram Seçimli'
+            };
+            const actionText = actionLabels[m.action_type] || 'Bilinmiyor';
+
+            const lastCheck = m.last_checked ? new Date(m.last_checked).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'Henüz taranmadı';
+
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm';
+            div.innerHTML = `
+                <div>
+                    <div class="font-medium text-gray-800">${patName}</div>
+                    <div class="text-sm text-gray-600">Arıyor: <span class="font-semibold text-purple-700">${m.search_text}</span></div>
+                    <div class="text-xs text-gray-500 mt-2 flex gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 rounded-md ${statusColor}">${statusText}</span>
+                        <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 shadow-sm">${actionText}</span>
+                        <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">⏱️ ${m.interval_minutes} dk</span>
+                        <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">🔄 Son: ${lastCheck}</span>
+                    </div>
+                </div>
+                <div>
+                    <button onclick="deleteMonitor(${m.id})" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Sil / Durdur">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            `;
+            listEl.appendChild(div);
+        });
+
+    } catch (e) {
+        listEl.innerHTML = '<div class="text-sm text-red-500">Taramalar yüklenirken hata oluştu.</div>';
+    }
+}
+
+async function saveMonitor(e) {
+    e.preventDefault();
+
+    const pId = document.getElementById('monitorPatient').value;
+    const sText = document.getElementById('monitorSearch').value;
+    const interval = document.getElementById('monitorInterval').value;
+    const actionType = document.getElementById('monitorActionType').value;
+
+    if (!pId || !sText) return;
+
+    const d = {
+        patient_id: parseInt(pId),
+        search_text: sText,
+        interval_minutes: parseInt(interval),
+        action_type: actionType
+    };
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Başlatılıyor...';
+
+    try {
+        const res = await fetch('/api/monitors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(d)
+        });
+
+        if (res.ok) {
+            document.getElementById('monitorSearch').value = '';
+            loadMonitors();
+        } else {
+            const err = await res.json();
+            alert(`Hata: ${err.detail}`);
+        }
+    } catch (err) {
+        alert('Sunucuya baglanilamadi.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Başlat';
+    }
+}
+
+async function deleteMonitor(mId) {
+    if (!confirm('Bu arka plan taramasını durdurmak ve silmek istediğinize emin misiniz?')) return;
+
+    try {
+        await fetch(`/api/monitors/${mId}`, { method: 'DELETE' });
+        loadMonitors();
+    } catch (e) {
+        alert('Silinirken hata oluştu.');
+    }
+}

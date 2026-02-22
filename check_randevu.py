@@ -27,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+from backend.notifications import send_telegram_message_sync
 
 load_dotenv()
 
@@ -1113,7 +1114,7 @@ class HacettepeBot:
                     hide_canvas=True,
                     allow_webgl=True,
                     network_idle=True,
-                    timeout=300000,       # 5 dk — page_action içindeki tüm flow için
+                    timeout=200000,       # 5 dk — page_action içindeki tüm flow için
                     page_action=page_action,
                     locale="tr-TR",
                     timezone_id="Europe/Istanbul",
@@ -3188,7 +3189,7 @@ class HacettepeBot:
         handle_info_dialog(page, cfg["phone"], cfg["email"])
         return True
 
-    def _search_flow(self, page, search_text=None, randevu_type=None, book=False, probe_subtimes=False) -> int:
+    def _search_flow(self, page, search_text=None, randevu_type=None, book=False, probe_subtimes=False, action_type="notify") -> int:
         """Arama + tip seçimi + randevu çıkarma + alternatif tarama.
 
         Args:
@@ -3258,7 +3259,17 @@ class HacettepeBot:
         if search_text and alternatives:
             first_name = alternatives[0]
 
+        # FİLTRELEME İŞLEMİ
+        date_range = self._cfg.get("date_range", "")
+        time_range = self._cfg.get("time_range", "")
+        if appt_info["has_availability"]:
+            appt_info["available_slots"] = self._filter_slots_by_datetime(appt_info["available_slots"], date_range, time_range)
+            appt_info["has_availability"] = len(appt_info["available_slots"]) > 0
+
         first_status = self._classify_appointments(page, appt_info)
+        if not appt_info["has_availability"] and first_status == "AVAILABLE":
+            first_status = "NOT_AVAILABLE"
+
         first_result = {
             "name": first_name,
             "appointments": appt_info,
@@ -3270,6 +3281,36 @@ class HacettepeBot:
         if appt_info["has_availability"]:
             detail = self._format_slots(appt_info["available_slots"])
             self._emit("available", f"[BILGI] MÜSAİT: {first_name} — {detail}")
+            
+            if action_type == "auto_book" and appt_info["available_slots"]:
+                first_slot = appt_info["available_slots"][0]
+                self._emit("booking", f"[OTOMATIK] Auto-book devrede. İlk slot seçiliyor: {first_slot}")
+                
+                send_telegram_message_sync(
+                    f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\n\n"
+                    f"🏥 <b>Bölüm:</b> {first_name}\n"
+                    f"⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
+                )
+                
+                res = self._book_specific_slot(page, first_slot["date"], first_slot["time"], first_slot.get("subtime", ""))
+                self.result["booking"] = res
+                if res.get("success"):
+                    send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\n{res.get('message', '')}")
+                    return 0
+                else:
+                    send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\nDetay: {res.get('error', '')}")
+                    return 1
+
+            elif action_type in ("ask_telegram", "silent"):
+                # ask_telegram: Alt-saat bildirimi scheduler._handle_monitor_result tarafından yapılır
+                # silent: Booking öncesi grid hazırlığı — bildirim gönderme
+                pass
+            else:
+                send_telegram_message_sync(
+                    f"🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>\n\n"
+                    f"🏥 <b>Bölüm:</b> {first_name}\n"
+                    f"⏰ <b>Saatler:</b>\n{detail}"
+                )
 
         self._screenshot(page, f"slot-{first_name[:20].replace(' ', '_')}")
 
@@ -3292,7 +3333,16 @@ class HacettepeBot:
 
                 self._cancellable_sleep(1)
                 opt_appt = self._extract_appointments(page)
+                
+                # FİLTRELEME İŞLEMİ
+                if opt_appt["has_availability"]:
+                    opt_appt["available_slots"] = self._filter_slots_by_datetime(opt_appt["available_slots"], date_range, time_range)
+                    opt_appt["has_availability"] = len(opt_appt["available_slots"]) > 0
+                
                 opt_status = self._classify_appointments(page, opt_appt)
+                if not opt_appt["has_availability"] and opt_status == "AVAILABLE":
+                    opt_status = "NOT_AVAILABLE"
+                    
                 opt_result = {
                     "name": opt,
                     "appointments": opt_appt,
@@ -3304,6 +3354,32 @@ class HacettepeBot:
                 if opt_appt["has_availability"]:
                     detail = self._format_slots(opt_appt["available_slots"])
                     self._emit("available", f"[BILGI] MÜSAİT: {opt} — {detail}")
+                    
+                    if action_type == "auto_book" and opt_appt["available_slots"]:
+                        first_slot = opt_appt["available_slots"][0]
+                        self._emit("booking", f"[OTOMATIK] Auto-book devrede. İlk slot seçiliyor: {first_slot}")
+                        
+                        send_telegram_message_sync(
+                            f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\n\n🏥 <b>Bölüm:</b> {opt}\n⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
+                        )
+                        
+                        res = self._book_specific_slot(page, first_slot["date"], first_slot["time"], first_slot.get("subtime", ""))
+                        self.result["booking"] = res
+                        if res.get("success"):
+                            send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\n{res.get('message', '')}")
+                            return 0
+                        else:
+                            send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\nDetay: {res.get('error', '')}")
+                            return 1
+
+                    elif action_type in ("ask_telegram", "silent"):
+                        pass
+                    else:
+                        send_telegram_message_sync(
+                            f"🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>\n\n"
+                            f"🏥 <b>Bölüm:</b> {opt}\n"
+                            f"⏰ <b>Saatler:</b>\n{detail}"
+                        )
 
                 self._screenshot(page, f"slot-{opt[:20].replace(' ', '_')}")
 
@@ -3378,7 +3454,7 @@ class HacettepeBot:
 
     def run_with_page(self, page, skip_login=False, search_text=None, randevu_type=None,
                       book=False, probe_subtimes=False,
-                      book_target=None) -> int:
+                      book_target=None, action_type="notify") -> int:
         """SessionManager'dan gelen page ile çalışır.
 
         Args:
@@ -3425,8 +3501,8 @@ class HacettepeBot:
                     pass
             
             if needs_search:
-                # Aramayı yap — grid oluşsun
-                self._search_flow(page, search_text, randevu_type, probe_subtimes=False)
+                # Aramayı yap — grid oluşsun (bildirim gönderme, sadece grid hazırla)
+                self._search_flow(page, search_text, randevu_type, probe_subtimes=False, action_type="silent")
 
             # Şimdi grid'deki hedef slot'a tıkla ve onayla
             result = self._book_specific_slot(
@@ -3438,7 +3514,62 @@ class HacettepeBot:
             self.result["booking"] = result
             return 0 if result.get("success") else 1
 
-        return self._search_flow(page, search_text, randevu_type, probe_subtimes=probe_subtimes)
+        return self._search_flow(page, search_text, randevu_type, probe_subtimes=probe_subtimes, action_type=action_type)
+
+    def _filter_slots_by_datetime(self, slots: list[dict], date_range: str, time_range: str) -> list[dict]:
+        """Filtrelere uyan slotları döndürür."""
+        if not date_range or date_range.lower() == "yok":
+            date_range = ""
+        if not time_range or time_range.lower() == "yok":
+            time_range = ""
+            
+        filtered = []
+        for slot in slots:
+            d = slot["date"] # format: DD.MM.YYYY
+            h = slot.get("time") or slot.get("hour", "")  # format: HH:MM
+            
+            # Simple date match logic
+            if date_range:
+                try:
+                    slot_date = datetime.strptime(d, "%d.%m.%Y").date()
+                    if "-" in date_range:
+                        start_str, end_str = date_range.split("-")
+                        start_date = datetime.strptime(start_str.strip(), "%d.%m.%Y").date() if start_str.strip() else datetime.min.date()
+                        end_date = datetime.strptime(end_str.strip(), "%d.%m.%Y").date() if end_str.strip() else datetime.max.date()
+                        if not (start_date <= slot_date <= end_date):
+                            continue
+                    elif date_range.lower() == "bugun":
+                        today = datetime.now().date()
+                        tomorrow = today + timedelta(days=1)
+                        if slot_date not in (today, tomorrow):
+                            continue
+                    else:
+                        target_date = datetime.strptime(date_range.strip(), "%d.%m.%Y").date()
+                        if slot_date != target_date:
+                            continue
+                except Exception as e:
+                    print(f"[FILTER] Tarih ayrıştırma hatası ({date_range}): {e}")
+            
+            # Simple time match logic
+            if time_range:
+                try:
+                    slot_time = datetime.strptime(h, "%H:%M").time()
+                    if "-" in time_range:
+                        start_str, end_str = time_range.split("-")
+                        start_time = datetime.strptime(start_str.strip(), "%H:%M").time() if start_str.strip() else datetime.min.time()
+                        end_time = datetime.strptime(end_str.strip(), "%H:%M").time() if end_str.strip() else datetime.max.time()
+                        if not (start_time <= slot_time <= end_time):
+                            continue
+                    else:
+                        target_time = datetime.strptime(time_range.strip(), "%H:%M").time()
+                        if slot_time != target_time:
+                            continue
+                except Exception as e:
+                    print(f"[FILTER] Saat ayrıştırma hatası ({time_range}): {e}")
+                    
+            filtered.append(slot)
+            
+        return filtered
 
     def _flow(self, page) -> int:
         """Geriye uyumluluk — login + search tek çağrıda."""
