@@ -79,6 +79,7 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                 probe_subtimes=probe_subtimes,
                 book=bool(book_target),
                 book_target=book_target,
+                action_type=config.get("action_type", "notify"),
             )
 
             if session_reused:
@@ -149,6 +150,8 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                 "slots": {"green": 0, "red": 0, "grey": 0, "total": 0, "details": []},
             }
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             # Hata durumunda session'ı kapat
             try:
                 sm.close_session(patient_tc)

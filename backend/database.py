@@ -26,6 +26,22 @@ def init_db():
             created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS monitors (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id       INTEGER NOT NULL,
+            search_text      TEXT NOT NULL,
+            randevu_type     TEXT NOT NULL,
+            interval_minutes INTEGER NOT NULL DEFAULT 15,
+            is_active        BOOLEAN NOT NULL DEFAULT 1,
+            action_type      TEXT NOT NULL DEFAULT 'notify',
+            date_range       TEXT DEFAULT '',
+            time_range       TEXT DEFAULT '',
+            last_checked     DATETIME DEFAULT NULL,
+            created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(patient_id) REFERENCES patients(id) ON DELETE CASCADE
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -81,3 +97,55 @@ def delete_patient(patient_id: int) -> bool:
     conn.commit()
     conn.close()
     return cur.rowcount > 0
+
+
+# ─── Monitors CRUD ───
+
+def get_all_monitors() -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute("SELECT * FROM monitors ORDER BY id").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_active_monitors() -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute("SELECT * FROM monitors WHERE is_active = 1").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def create_monitor(patient_id: int, search_text: str, randevu_type: str, interval_minutes: int = 15, action_type: str = "notify", date_range: str = "", time_range: str = "") -> dict:
+    conn = _get_conn()
+    cur = conn.execute(
+        "INSERT INTO monitors (patient_id, search_text, randevu_type, interval_minutes, action_type, date_range, time_range) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (patient_id, search_text, randevu_type, interval_minutes, action_type, date_range, time_range),
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM monitors WHERE id = ?", (cur.lastrowid,)).fetchone()
+    conn.close()
+    return dict(row)
+
+def update_monitor(monitor_id: int, **kwargs) -> dict | None:
+    allowed = {"patient_id", "search_text", "randevu_type", "interval_minutes", "is_active", "action_type", "date_range", "time_range", "last_checked"}
+    fields = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
+    if not fields:
+        conn = _get_conn()
+        row = conn.execute("SELECT * FROM monitors WHERE id = ?", (monitor_id,)).fetchone()
+        conn.close()
+        return _row_to_dict(row)
+    
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [monitor_id]
+    conn = _get_conn()
+    conn.execute(f"UPDATE monitors SET {set_clause} WHERE id = ?", values)
+    conn.commit()
+    row = conn.execute("SELECT * FROM monitors WHERE id = ?", (monitor_id,)).fetchone()
+    conn.close()
+    return _row_to_dict(row)
+
+def delete_monitor(monitor_id: int) -> bool:
+    conn = _get_conn()
+    cur = conn.execute("DELETE FROM monitors WHERE id = ?", (monitor_id,))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+

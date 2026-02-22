@@ -11,9 +11,14 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from backend.database import init_db, get_all_patients, get_patient, create_patient, update_patient, delete_patient
+from backend.database import (
+    init_db, get_all_patients, get_patient, create_patient, update_patient, delete_patient,
+    get_all_monitors, create_monitor, update_monitor, delete_monitor
+)
 from backend.bot_runner import run_bot_with_session
 from backend.session_manager import SessionManager
+from backend.scheduler import start_scheduler, stop_scheduler
+from backend.telegram_bot import start_telegram_poller, stop_telegram_poller
 
 BASE_DIR = Path(__file__).parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
@@ -27,10 +32,14 @@ app = FastAPI(title="HacettepeBot", version="1.0.0")
 def on_startup():
     init_db()
     ARTIFACTS_DIR.mkdir(exist_ok=True)
+    start_scheduler()
+    start_telegram_poller()
 
 
 @app.on_event("shutdown")
 def on_shutdown():
+    stop_telegram_poller()
+    stop_scheduler()
     SessionManager().close_all()
 
 
@@ -47,6 +56,21 @@ class PatientUpdate(BaseModel):
     tc_kimlik: Optional[str] = None
     dogum_tarihi: Optional[str] = None
     phone: Optional[str] = None
+
+
+class MonitorCreate(BaseModel):
+    patient_id: int
+    search_text: str
+    randevu_type: str = "internet randevu"
+    interval_minutes: int = 15
+    action_type: str = "notify"
+    date_range: str = ""
+    time_range: str = ""
+
+
+class MonitorUpdate(BaseModel):
+    is_active: Optional[bool] = None
+    interval_minutes: Optional[int] = None
 
 
 # ─── REST: Hasta CRUD ───
@@ -89,6 +113,27 @@ def get_session_status(patient_id: int):
         raise HTTPException(404, "Hasta bulunamadı.")
     sm = SessionManager()
     return sm.get_status(patient["tc_kimlik"])
+
+
+# ─── REST: Shadow Mode Monitors ───
+@app.get("/api/monitors")
+def list_monitors():
+    return get_all_monitors()
+
+@app.post("/api/monitors", status_code=201)
+def add_monitor(data: MonitorCreate):
+    return create_monitor(data.patient_id, data.search_text, data.randevu_type, data.interval_minutes, data.action_type, data.date_range, data.time_range)
+
+@app.put("/api/monitors/{monitor_id}")
+def edit_monitor(monitor_id: int, data: MonitorUpdate):
+    return update_monitor(monitor_id, **data.model_dump(exclude_none=True))
+
+@app.delete("/api/monitors/{monitor_id}")
+def remove_monitor(monitor_id: int):
+    from backend.scheduler import cancel_monitor
+    cancel_monitor(monitor_id)
+    delete_monitor(monitor_id)
+    return {"ok": True}
 
 
 # ─── WebSocket: Randevu Arama (multi-message loop) ───
