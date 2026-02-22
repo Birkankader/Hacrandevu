@@ -3287,28 +3287,29 @@ class HacettepeBot:
                 self._emit("booking", f"[OTOMATIK] Auto-book devrede. İlk slot seçiliyor: {first_slot}")
                 
                 send_telegram_message_sync(
-                    f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\\n\\n"
-                    f"🏥 <b>Bölüm:</b> {first_name}\\n"
+                    f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\n\n"
+                    f"🏥 <b>Bölüm:</b> {first_name}\n"
                     f"⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
                 )
                 
                 res = self._book_specific_slot(page, first_slot["date"], first_slot["time"], first_slot.get("subtime", ""))
                 self.result["booking"] = res
                 if res.get("success"):
-                    send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\\n{res.get('message', '')}")
+                    send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\n{res.get('message', '')}")
                     return 0
                 else:
-                    send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\\nDetay: {res.get('error', '')}")
+                    send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\nDetay: {res.get('error', '')}")
                     return 1
 
-            elif action_type == "ask_telegram":
-                # Alt-saat bildirimi scheduler._handle_monitor_result tarafından yapılır (probed subtimes ile)
+            elif action_type in ("ask_telegram", "silent"):
+                # ask_telegram: Alt-saat bildirimi scheduler._handle_monitor_result tarafından yapılır
+                # silent: Booking öncesi grid hazırlığı — bildirim gönderme
                 pass
             else:
                 send_telegram_message_sync(
-                    f"🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>\\n\\n"
-                    f"🏥 <b>Bölüm:</b> {first_name}\\n"
-                    f"⏰ <b>Saatler:</b>\\n{detail}"
+                    f"🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>\n\n"
+                    f"🏥 <b>Bölüm:</b> {first_name}\n"
+                    f"⏰ <b>Saatler:</b>\n{detail}"
                 )
 
         self._screenshot(page, f"slot-{first_name[:20].replace(' ', '_')}")
@@ -3359,26 +3360,25 @@ class HacettepeBot:
                         self._emit("booking", f"[OTOMATIK] Auto-book devrede. İlk slot seçiliyor: {first_slot}")
                         
                         send_telegram_message_sync(
-                            f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\\n\\n🏥 <b>Bölüm:</b> {opt}\\n⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
+                            f"⚡ <b>RANDEVU ALINIYOR! (Auto-Book)</b>\n\n🏥 <b>Bölüm:</b> {opt}\n⏰ <b>Hedef:</b> {first_slot['date']} {first_slot['hour']} {first_slot.get('subtime', '')}"
                         )
                         
                         res = self._book_specific_slot(page, first_slot["date"], first_slot["time"], first_slot.get("subtime", ""))
                         self.result["booking"] = res
                         if res.get("success"):
-                            send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\\n{res.get('message', '')}")
+                            send_telegram_message_sync(f"✅ 🎉 <b>Otomatik Randevu Başarıyla Alındı!</b>\n{res.get('message', '')}")
                             return 0
                         else:
-                            send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\\nDetay: {res.get('error', '')}")
+                            send_telegram_message_sync(f"❌ 😔 <b>Otomatik randevu alınamadı! Başkası kapmış olabilir.</b>\nDetay: {res.get('error', '')}")
                             return 1
 
-                    elif action_type == "ask_telegram":
-                        # Alt-saat bildirimi scheduler._handle_monitor_result tarafından yapılır
+                    elif action_type in ("ask_telegram", "silent"):
                         pass
                     else:
                         send_telegram_message_sync(
-                            f"🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>\\n\\n"
-                            f"🏥 <b>Bölüm:</b> {opt}\\n"
-                            f"⏰ <b>Saatler:</b>\\n{detail}"
+                            f"🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>\n\n"
+                            f"🏥 <b>Bölüm:</b> {opt}\n"
+                            f"⏰ <b>Saatler:</b>\n{detail}"
                         )
 
                 self._screenshot(page, f"slot-{opt[:20].replace(' ', '_')}")
@@ -3501,8 +3501,8 @@ class HacettepeBot:
                     pass
             
             if needs_search:
-                # Aramayı yap — grid oluşsun
-                self._search_flow(page, search_text, randevu_type, probe_subtimes=False, action_type="notify")
+                # Aramayı yap — grid oluşsun (bildirim gönderme, sadece grid hazırla)
+                self._search_flow(page, search_text, randevu_type, probe_subtimes=False, action_type="silent")
 
             # Şimdi grid'deki hedef slot'a tıkla ve onayla
             result = self._book_specific_slot(
