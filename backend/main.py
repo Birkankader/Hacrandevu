@@ -157,10 +157,10 @@ async def ws_search(ws: WebSocket):
                 continue
 
             # ── Search / Book action ──
-            book_mode = action == "book"
             patient_id = msg.get("patient_id")
             search_text = msg.get("search_text", "")
             randevu_type = msg.get("randevu_type", "internet randevu")
+            book_target = msg.get("book_target")  # {"date","hour","subtime"}
 
             patient = get_patient(patient_id)
             if not patient:
@@ -178,7 +178,12 @@ async def ws_search(ws: WebSocket):
                 "randevu_type": randevu_type,
             }
 
-            init_msg = "Randevu alma başlatılıyor..." if book_mode else "Bot başlatılıyor..."
+            if action == "book" and book_target:
+                init_msg = f"Randevu alınıyor: {book_target.get('date')} {book_target.get('subtime')}..."
+            elif action == "search":
+                init_msg = "Arama ve alt-saat keşfi başlatılıyor..."
+            else:
+                init_msg = "Bot başlatılıyor..."
             await ws.send_json({"type": "status", "step": "init", "message": init_msg})
 
             loop = asyncio.get_event_loop()
@@ -194,21 +199,28 @@ async def ws_search(ws: WebSocket):
                 except Exception:
                     pass
 
-            # Bot'u bu hastaya özel thread'de çalıştır (Playwright sync API uyumluluğu için)
-            ce = cancel_event  # closure capture
+            # Bot'u bu hastaya özel thread'de çalıştır
+            ce = cancel_event
             sm = SessionManager()
             tc = patient["tc_kimlik"]
             executor = sm.get_executor(tc)
-            
+
+            # search: probe_subtimes=True, book: book_target ile
+            _bt = book_target if action == "book" else None
+            _probe = action == "search"  # search her zaman alt-saat keşfi yapar
+
             result = await loop.run_in_executor(
                 executor,
-                lambda: run_bot_with_session(bot_config, status_callback, cancel_event=ce, book=book_mode),
+                lambda: run_bot_with_session(
+                    bot_config, status_callback, cancel_event=ce,
+                    probe_subtimes=_probe, book_target=_bt,
+                ),
             )
 
             cancel_event = None
             await ws.send_json({"type": "result", "data": result})
 
-            # Arama sonrası session durumunu gönder
+            # Session durumunu gönder
             session_status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
             await ws.send_json({"type": "session_status", "data": session_status})
 
