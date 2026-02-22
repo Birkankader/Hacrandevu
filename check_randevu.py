@@ -528,7 +528,7 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=
     try:
         solver = TwoCaptcha(api_key)
         solver.recaptcha_timeout = 300
-        solver.polling_interval = 5
+        solver.polling_interval = 3
 
         # solver.recaptcha() bloklar — ayrı thread'de çalıştırıp cancel kontrol et
         from concurrent.futures import ThreadPoolExecutor
@@ -740,8 +740,8 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=
                 return False
 
         # ── Post-enjeksiyon doğrulama (HIZLI — token expire olmasın) ──
-        print("  [2captcha] Kısa doğrulama bekleniyor (1.5 saniye)...")
-        time.sleep(1.5)
+        print("  [2captcha] Kısa doğrulama bekleniyor (0.5 saniye)...")
+        time.sleep(0.5)
 
         # Doğrulama 1: reCAPTCHA widget checked oldu mu?
         if _verify_recaptcha_checked(page):
@@ -1361,7 +1361,10 @@ class HacettepeBot:
         if first_item is not None:
             try:
                 print(f"  [ARAMA] İlk alternatif seçiliyor: {alternatives[0][:60]}")
-                first_item.click(timeout=5000)
+                try:
+                    first_item.click(force=True, timeout=5000)
+                except Exception:
+                    first_item.evaluate("el => el.click()")
                 selected = True
                 human_delay(500, 1000)
             except Exception as e:
@@ -2154,6 +2157,452 @@ class HacettepeBot:
             return "POSSIBLY_AVAILABLE"
         return "UNKNOWN"
 
+    # ── Randevu Alma (Booking) ──
+
+    # Reusable JS: yeşil saat bloğunu tarih+saat ile bulup tıklar
+    _CLICK_SLOT_JS = """(args) => {
+        var targetDate = args.targetDate;
+        var targetTime = args.targetTime;
+        var timeRe = /(\\d{1,2})[:.](\\d{2})/;
+
+        var monthMap = {'oca':'01','şub':'02','sub':'02','mar':'03','nis':'04',
+            'may':'05','haz':'06','tem':'07','ağu':'08','agu':'08',
+            'eyl':'09','eki':'10','kas':'11','ara':'12'};
+        var curYear = new Date().getFullYear();
+
+        function parseTrDate(text) {
+            var m = text.trim().match(/(\\d{1,2})\\s+([a-zçğıöşüA-ZÇĞİÖŞÜ]+)/i);
+            if (m) {
+                var day = m[1].padStart(2,'0');
+                var mon = monthMap[m[2].substring(0,3).toLowerCase()];
+                if (mon) return day + '.' + mon + '.' + curYear;
+            }
+            return '';
+        }
+
+        function classifyColor(bgColor, el) {
+            var cls = (el.className || '').toLowerCase();
+            if (/green|available|acik|açık|success|musait/.test(cls)) return 'açık';
+            if (/red|full|dolu|danger|occupied/.test(cls)) return 'dolu';
+            var m2 = bgColor.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+            if (!m2) return 'bilinmiyor';
+            var r = parseInt(m2[1]), g = parseInt(m2[2]), b = parseInt(m2[3]);
+            if (Math.min(r,g,b) > 230) return 'bos';
+            if (g > r + 30 && g > b + 30) return 'açık';
+            if (r > g + 30 && r > b + 30) return 'dolu';
+            return 'bilinmiyor';
+        }
+
+        function collectAllElements(root, result) {
+            if (!root) return;
+            var ch = root.children || root.childNodes || [];
+            for (var i = 0; i < ch.length; i++) {
+                var c = ch[i];
+                if (c.nodeType === 1) {
+                    result.push(c);
+                    if (c.shadowRoot) collectAllElements(c.shadowRoot, result);
+                    collectAllElements(c, result);
+                }
+            }
+        }
+
+        var allEls = [];
+        collectAllElements(document.body, allEls);
+
+        // Tarih başlıkları
+        var dateHeaders = [];
+        var dateHdrRe = /^\\s*\\d{1,2}\\s+[A-Za-zçğıöşüÇĞİÖŞÜ]+\\s*$/;
+        for (var h = 0; h < allEls.length; h++) {
+            var htxt = (allEls[h].textContent || '').trim();
+            if (dateHdrRe.test(htxt) && htxt.length < 30) {
+                var hrect = allEls[h].getBoundingClientRect();
+                if (hrect.width > 0 && hrect.height > 0) {
+                    var pd = parseTrDate(htxt);
+                    if (pd) dateHeaders.push({date: pd, centerX: hrect.left + hrect.width / 2});
+                }
+            }
+        }
+
+        var visited = {};
+        for (var i = 0; i < allEls.length; i++) {
+            var el = allEls[i];
+            var raw = el.textContent || '';
+            if (raw.length > 40) continue;
+            var text = raw.trim();
+            if (!text) continue;
+            var tm = text.match(timeRe);
+            if (!tm) continue;
+            var rect = el.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) continue;
+            var pk = Math.round(rect.left) + ',' + Math.round(rect.top);
+            if (visited[pk]) continue;
+            visited[pk] = true;
+            var time = tm[1].padStart(2,'0') + ':' + tm[2];
+            if (time !== targetTime) continue;
+            // Renk
+            var bg = '';
+            var ce = el; var dep = 0;
+            while (dep < 6) {
+                if (!ce) break;
+                var st = window.getComputedStyle(ce);
+                bg = st.backgroundColor;
+                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') break;
+                ce = ce.parentElement || (ce.getRootNode && ce.getRootNode().host);
+                dep++;
+            }
+            if (classifyColor(bg||'', el) !== 'açık') continue;
+            // Tarih
+            var date = '';
+            var cx = rect.left + rect.width / 2;
+            var minD = Infinity;
+            for (var d = 0; d < dateHeaders.length; d++) {
+                var dd = Math.abs(cx - dateHeaders[d].centerX);
+                if (dd < minD) { minD = dd; date = dateHeaders[d].date; }
+            }
+            if (date !== targetDate) continue;
+            el.scrollIntoView({block: 'center'});
+            el.click();
+            return {clicked: true};
+        }
+        return {clicked: false};
+    }"""
+
+    def _click_grid_slot(self, page, target_date, target_time):
+        """Grid'deki yeşil saat bloğunu tıklar. Returns bool."""
+        res = page.evaluate(self._CLICK_SLOT_JS, {"targetDate": target_date, "targetTime": target_time})
+        return res and res.get("clicked", False)
+
+    def _wait_for_dialog(self, page, timeout_s=10):
+        """Vaadin dialog overlay'in açılmasını (görünür olmasını) bekler."""
+        # 0.2 saniyelik daha sık kontrollerle bekleme (5x daha tepkisel)
+        max_attempts = timeout_s * 5
+        for _ in range(max_attempts):
+            self._check_cancelled()
+            try:
+                d = page.locator("vaadin-dialog-overlay")
+                if d.count() > 0 and d.first.is_visible():
+                    # Animasyon bitişi için ufak tampon
+                    human_delay(100, 200)
+                    return d.first
+            except Exception:
+                pass
+            self._cancellable_sleep(0.2)
+        return None
+
+    def _close_dialog(self, page):
+        """Açık dialog'u 'Vazgeç' ile kapat ve ekrandan kaybolmasını bekle."""
+        try:
+            d = page.locator("vaadin-dialog-overlay")
+            if d.count() > 0 and d.first.is_visible():
+                # "Vazgeç" linkini/butonunu ara
+                for sel in ["a", "vaadin-button", "button"]:
+                    items = d.first.locator(sel).all()
+                    for item in items:
+                        txt = (item.text_content() or "").strip().lower()
+                        if "vazgeç" in txt or "kapat" in txt or "iptal" in txt:
+                            item.click(timeout=3000)
+                            try:
+                                d.first.wait_for(state="hidden", timeout=2000)
+                            except Exception:
+                                self._cancellable_sleep(0.3)
+                            return True
+                # Fallback: Escape
+                page.keyboard.press("Escape")
+                try:
+                    d.first.wait_for(state="hidden", timeout=2000)
+                except Exception:
+                    self._cancellable_sleep(0.3)
+                return True
+        except Exception:
+            pass
+            
+        # Son çare Fallback
+        try:
+            page.keyboard.press("Escape")
+            self._cancellable_sleep(0.3)
+        except Exception:
+            pass
+        return False
+
+    def _read_dialog_subtimes(self, dialog):
+        """Dialog içindeki 'Saat seçiniz.' bölümündeki gerçek alt-saatleri oku.
+
+        Returns:
+            list[str] — ["16:00", "16:10", "16:20", ...]
+        """
+        subtimes = []
+        try:
+            # Dialog içindeki tüm metin elementlerinden saat desenlerini topla
+            # "Saat seçiniz." metninden sonraki saat butonlarını bul
+            result = dialog.evaluate("""() => {
+                var times = [];
+                var overlay = document.querySelector('vaadin-dialog-overlay');
+                if (!overlay) return times;
+
+                // Overlay content'i al
+                var content = overlay.querySelector('[slot=""] , #content, #overlay, .content')
+                    || overlay.shadowRoot && overlay.shadowRoot.querySelector('#content')
+                    || overlay;
+
+                // Tüm elementleri tara
+                function walk(root) {
+                    if (!root) return;
+                    var children = root.children || [];
+                    for (var i = 0; i < children.length; i++) {
+                        var el = children[i];
+                        if (el.shadowRoot) walk(el.shadowRoot);
+                        walk(el);
+                    }
+                    // Doğrudan child'lar
+                    var allEls = root.querySelectorAll ? root.querySelectorAll('*') : [];
+                    for (var j = 0; j < allEls.length; j++) {
+                        var el2 = allEls[j];
+                        var txt = (el2.textContent || '').trim();
+                        // Sadece kısa saat metinleri (HH:MM formatında)
+                        if (/^\\d{1,2}[:.:]\\d{2}$/.test(txt)) {
+                            var rect = el2.getBoundingClientRect();
+                            if (rect.width > 0 && rect.height > 0) {
+                                // Tıklanabilir mi kontrol et
+                                var tag = el2.tagName.toLowerCase();
+                                var clickable = tag === 'button' || tag === 'vaadin-button' || tag === 'a'
+                                    || el2.getAttribute('role') === 'button'
+                                    || window.getComputedStyle(el2).cursor === 'pointer';
+                                // Background rengi kontrol et
+                                var bg = window.getComputedStyle(el2).backgroundColor;
+                                var parentBg = el2.parentElement ? window.getComputedStyle(el2.parentElement).backgroundColor : '';
+
+                                if (times.indexOf(txt.replace('.', ':')) < 0) {
+                                    times.push(txt.replace('.', ':'));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                walk(overlay);
+
+                // Ayrıca overlay'in kendisi üzerinde querySelectorAll dene
+                var directEls = overlay.querySelectorAll('*');
+                for (var k = 0; k < directEls.length; k++) {
+                    var el3 = directEls[k];
+                    var txt3 = (el3.textContent || '').trim();
+                    if (/^\\d{1,2}[:.:]\\d{2}$/.test(txt3)) {
+                        var t = txt3.replace('.', ':');
+                        var parts = t.split(':');
+                        t = parts[0].padStart(2,'0') + ':' + parts[1];
+                        if (times.indexOf(t) < 0) {
+                            times.push(t);
+                        }
+                    }
+                }
+
+                return times;
+            }""")
+            if result:
+                # Normalize: HH:MM
+                for t in result:
+                    parts = t.split(":")
+                    normalized = parts[0].zfill(2) + ":" + parts[1]
+                    if normalized not in subtimes:
+                        subtimes.append(normalized)
+        except Exception as e:
+            print(f"  [PROBE] Alt-saat okuma hatası: {e}")
+
+        return sorted(subtimes)
+
+    def _probe_slot_subtimes(self, page, target_date, target_time):
+        """Bir yeşil saat bloğunu tıklayıp alt-saatleri keşfeder, sonra dialog'u kapatır.
+
+        Returns:
+            list[str] — ["16:00", "16:10", "16:20", ...] veya boş liste
+        """
+        self._emit("probing", f"[PROBE] Alt-saatler keşfediliyor: {target_date} {target_time}")
+
+        if not self._click_grid_slot(page, target_date, target_time):
+            self._emit("probing", f"[PROBE] Slot tıklanamadı: {target_date} {target_time}")
+            return []
+
+        # Tıklama sonrası 2 saniyelik statik bekleme KALDIRILDI.
+        # _wait_for_dialog zaten dinamik olarak dialogun görünmesini bekler.
+        self._cancellable_sleep(0.3)
+
+        dialog = self._wait_for_dialog(page, timeout_s=8)
+        if not dialog:
+            self._emit("probing", f"[PROBE] Dialog açılmadı: {target_date} {target_time}")
+            return []
+
+        self._screenshot(page, f"probe-{target_date}-{target_time}")
+
+        subtimes = self._read_dialog_subtimes(dialog)
+        self._emit("probing", f"[PROBE] {target_date} {target_time} → Alt-saatler: {subtimes}")
+
+        # Dialog'u kapat (Vazgeç)
+        self._close_dialog(page)
+
+        return subtimes
+
+    def _probe_all_subtimes(self, page, available_slots):
+        """Tüm açık saat bloklarının alt-saatlerini keşfeder.
+
+        Returns:
+            list[dict] — [{date, hour, subtimes: [str], ...}, ...]
+        """
+        # Unique date+time pairs
+        seen = set()
+        probed = []
+
+        for slot in available_slots:
+            self._check_cancelled()
+            key = (slot["date"], slot["time"])
+            if key in seen:
+                continue
+            seen.add(key)
+
+            subtimes = self._probe_slot_subtimes(page, slot["date"], slot["time"])
+            probed.append({
+                "date": slot["date"],
+                "hour": slot["time"],
+                "subtimes": subtimes if subtimes else [slot["time"]],  # fallback: saat bloğu
+            })
+
+        return probed
+
+    def _book_specific_slot(self, page, target_date, target_hour, target_subtime):
+        """Belirli bir tarih/saat/alt-saat için randevu alır.
+
+        1. Grid'deki saat bloğunu tıkla
+        2. Dialog'daki alt-saati tıkla
+        3. Onay butonuna tıkla
+
+        Returns:
+            dict — {"success": bool, "message": str}
+        """
+        self._emit("booking", f"[RANDEVU] Slot tıklanıyor: {target_date} {target_hour}")
+
+        if not self._click_grid_slot(page, target_date, target_hour):
+            return {"success": False, "message": f"Saat bloğu tıklanamadı: {target_date} {target_hour}"}
+
+        self._cancellable_sleep(2)
+        self._screenshot(page, "booking-after-click")
+
+        dialog = self._wait_for_dialog(page, timeout_s=10)
+        if not dialog:
+            return {"success": False, "message": "Dialog açılmadı"}
+
+        self._screenshot(page, "booking-dialog")
+        self._emit("booking", f"[RANDEVU] Dialog açıldı, alt-saat seçiliyor: {target_subtime}")
+
+        # Dialog içindeki hedef alt-saati tıkla
+        subtime_clicked = False
+        try:
+            # Dialog içinde HH:MM metnine sahip tıklanabilir elementi bul
+            all_elements = dialog.locator("*").all()
+            for el in all_elements:
+                try:
+                    txt = (el.text_content() or "").strip()
+                    if txt.replace(".", ":") == target_subtime or txt == target_subtime:
+                        # Sadece kısa metin (saat formatı) olan elementleri tıkla
+                        if len(txt) <= 5:
+                            el.click(timeout=3000)
+                            subtime_clicked = True
+                            self._emit("booking", f"[RANDEVU] Alt-saat tıklandı: {target_subtime}")
+                            break
+                except Exception:
+                    continue
+        except Exception as e:
+            self._emit("booking", f"[RANDEVU] Alt-saat tıklama hatası: {e}")
+
+        if not subtime_clicked:
+            # Fallback: JS ile tıkla
+            try:
+                clicked = page.evaluate("""(subtime) => {
+                    var overlay = document.querySelector('vaadin-dialog-overlay');
+                    if (!overlay) return false;
+                    var all = overlay.querySelectorAll('*');
+                    for (var i = 0; i < all.length; i++) {
+                        var txt = (all[i].textContent || '').trim().replace('.', ':');
+                        if (txt === subtime && txt.length <= 5) {
+                            all[i].click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }""", target_subtime)
+                if clicked:
+                    subtime_clicked = True
+                    self._emit("booking", f"[RANDEVU] Alt-saat JS ile tıklandı: {target_subtime}")
+            except Exception:
+                pass
+
+        if not subtime_clicked:
+            self._close_dialog(page)
+            return {"success": False, "message": f"Alt-saat bulunamadı: {target_subtime}"}
+
+        self._cancellable_sleep(2)
+        self._screenshot(page, "booking-after-subtime")
+
+        # Şimdi "XX:XX Saati için randevu alınsın mı?" + "Onayla" bekleniyor
+        # Dialog güncellenmeli
+        try:
+            dialog = page.locator("vaadin-dialog-overlay").first
+            dialog_text = dialog.inner_text() if dialog.is_visible() else ""
+            self._emit("booking", f"[RANDEVU] Onay ekranı: {dialog_text[:200]}")
+        except Exception:
+            dialog_text = ""
+
+        # "Onayla" butonunu bul ve tıkla
+        confirm_clicked = False
+        try:
+            buttons = dialog.locator("vaadin-button, button").all()
+            for btn in buttons:
+                btn_text = (btn.text_content() or "").strip().lower()
+                if "onayla" in btn_text or "evet" in btn_text or "randevu al" in btn_text:
+                    if "vazgeç" not in btn_text and "iptal" not in btn_text:
+                        btn.click(timeout=5000)
+                        confirm_clicked = True
+                        self._emit("booking", f"[RANDEVU] Onayla tıklandı: '{btn_text}'")
+                        break
+        except Exception as e:
+            self._emit("booking", f"[RANDEVU] Onay tıklama hatası: {e}")
+
+        if not confirm_clicked:
+            # Fallback: primary theme buton
+            try:
+                btn = dialog.locator('vaadin-button[theme*="primary"]').first
+                if btn.count() > 0 and btn.is_visible():
+                    btn.click(timeout=5000)
+                    confirm_clicked = True
+                    self._emit("booking", "[RANDEVU] Onayla (primary theme) tıklandı")
+            except Exception:
+                pass
+
+        if not confirm_clicked:
+            self._close_dialog(page)
+            return {"success": False, "message": "Onayla butonu bulunamadı"}
+
+        self._cancellable_sleep(3)
+        self._screenshot(page, "booking-final")
+
+        # Sonuç kontrolü
+        try:
+            body_text = page.locator("body").inner_text()
+            if re.search(r"randevu.*alın|başarılı|onaylandı|kaydedildi|randevunuz.*oluştur", body_text, re.IGNORECASE):
+                self._emit("booking", "[RANDEVU] *** RANDEVU BAŞARIYLA ALINDI! ***")
+                return {"success": True, "message": "Randevu başarıyla alındı!"}
+        except Exception:
+            pass
+
+        # Dialog kapandıysa muhtemelen başarılı
+        try:
+            remaining = page.locator("vaadin-dialog-overlay")
+            if remaining.count() == 0:
+                self._emit("booking", "[RANDEVU] Dialog kapandı — randevu muhtemelen alındı")
+                return {"success": True, "message": "Randevu alındı (dialog kapandı)"}
+        except Exception:
+            pass
+
+        return {"success": False, "message": "Sonuç belirsiz"}
+
     def _format_slots(self, available_slots):
         """Slot listesini okunabilir metne çevirir.
 
@@ -2476,21 +2925,29 @@ class HacettepeBot:
         """
         cfg = self._cfg
         # ── Google ziyareti: reCAPTCHA güven cookieleri oluştur ──
-        try:
-            self._emit("google_visit", "[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
-            page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=15000)
-            time.sleep(random.uniform(1.5, 3.0))
-            simulate_human(page, extensive=True)
-            time.sleep(random.uniform(1.0, 2.0))
-            page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
-            time.sleep(2)
-        except Exception as e:
-            self._emit("google_visit", f"[UYARI] Google pre-visit hatası: {e}")
+        if cfg.get("captcha_api_key"):
+            self._emit("google_visit", "[BILGI] 2Captcha API anahtarı mevcut. Google güven adımı atlanıyor (hızlı yol).")
             try:
                 page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
-                time.sleep(2)
+                time.sleep(1)
             except Exception:
                 pass
+        else:
+            try:
+                self._emit("google_visit", "[BILGI] Google ziyareti (reCAPTCHA güven oluşturma)...")
+                page.goto("https://www.google.com/", wait_until="domcontentloaded", timeout=15000)
+                time.sleep(random.uniform(1.5, 3.0))
+                simulate_human(page, extensive=True)
+                time.sleep(random.uniform(1.0, 2.0))
+                page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
+                time.sleep(2)
+            except Exception as e:
+                self._emit("google_visit", f"[UYARI] Google pre-visit hatası: {e}")
+                try:
+                    page.goto(cfg["target_url"], wait_until="networkidle", timeout=30000)
+                    time.sleep(2)
+                except Exception:
+                    pass
 
         # ── İnsan davranışı ──
         simulate_human(page, extensive=True)
@@ -2731,8 +3188,12 @@ class HacettepeBot:
         handle_info_dialog(page, cfg["phone"], cfg["email"])
         return True
 
-    def _search_flow(self, page, search_text=None, randevu_type=None) -> int:
+    def _search_flow(self, page, search_text=None, randevu_type=None, book=False, probe_subtimes=False) -> int:
         """Arama + tip seçimi + randevu çıkarma + alternatif tarama.
+
+        Args:
+            book: True ise belirli bir slottan randevu almayı dener (book_target gerekli)
+            probe_subtimes: True ise açık slotların alt-saatlerini keşfeder
 
         Returns:
             0 — müsait randevu bulundu
@@ -2880,6 +3341,34 @@ class HacettepeBot:
                 if r["status"] == "AVAILABLE":
                     avail_details.append(f"{r['name']}: {r['formatted']}")
             self._emit("result", f"[{ts}] *** MÜSAİT RANDEVU: {'; '.join(avail_details)} ***")
+
+            # ── Alt-saat keşfi (probe) ──
+            if probe_subtimes:
+                self._emit("probing", "[PROBE] Açık slotların alt-saatleri keşfediliyor...")
+                # İlk müsait alternatifte probe yap (şu an sayfada görünen son alternatif)
+                # En çok slot olan alternatifi seç
+                best_alt = None
+                best_slots = []
+                for r in all_results:
+                    if r["status"] == "AVAILABLE":
+                        slots = r["appointments"].get("available_slots", [])
+                        if len(slots) > len(best_slots):
+                            best_alt = r["name"]
+                            best_slots = slots
+
+                if best_alt and best_slots:
+                    # Eğer bu alternatif şu an sayfada değilse, geçiş yap
+                    last_scanned = all_results[-1]["name"] if all_results else ""
+                    if best_alt != last_scanned:
+                        self._emit("probing", f"[PROBE] '{best_alt}' alternatifine geçiliyor...")
+                        self._select_unit_combo_option(page, best_alt)
+                        self._cancellable_sleep(2)
+
+                    probed = self._probe_all_subtimes(page, best_slots)
+                    self.result["probed_subtimes"] = probed
+                    self.result["probed_alt_name"] = best_alt
+                    self._emit("probing", f"[PROBE] Toplam {sum(len(p['subtimes']) for p in probed)} alt-saat keşfedildi")
+
             return 0
         if overall_status == "NOT_AVAILABLE":
             self._emit("result", f"[{ts}] Hiçbir alternatifde uygun randevu bulunamadı.")
@@ -2887,7 +3376,9 @@ class HacettepeBot:
         self._emit("result", f"[{ts}] Durum belirsiz → artifacts/last-check.png")
         return 3
 
-    def run_with_page(self, page, skip_login=False, search_text=None, randevu_type=None) -> int:
+    def run_with_page(self, page, skip_login=False, search_text=None, randevu_type=None,
+                      book=False, probe_subtimes=False,
+                      book_target=None) -> int:
         """SessionManager'dan gelen page ile çalışır.
 
         Args:
@@ -2895,6 +3386,9 @@ class HacettepeBot:
             skip_login: True ise login atlanır (mevcut session kullanılır)
             search_text: Arama metni (None ise cfg'den alınır)
             randevu_type: Randevu tipi (None ise cfg'den alınır)
+            book: True ise belirli slottan randevu alır (book_target gerekli)
+            probe_subtimes: True ise açık slotların alt-saatlerini keşfeder
+            book_target: {"date": "26.02.2026", "hour": "16:00", "subtime": "16:10"}
 
         Returns:
             0 — müsait randevu bulundu
@@ -2913,7 +3407,38 @@ class HacettepeBot:
             # Session mevcut — direkt arama dene, başarısız olursa login'e düş
             self._emit("init", "[BILGI] Mevcut oturum kullanılıyor, login atlanıyor...")
 
-        return self._search_flow(page, search_text, randevu_type)
+        # Booking: önce arama yap (grid'i oluştur), sonra slot'u tıkla
+        if book and book_target:
+            self._emit("booking", f"[RANDEVU] Arama + randevu alma: {book_target}")
+            
+            # Fast-path: Eğer session yeniden kullanılmışsa (skip_login=True)
+            # ve saat blokları ekranda zaten varsa (yani bir önceki arama sonuçları duruyorsa),
+            # arama adımını pas geç.
+            needs_search = True
+            if skip_login:
+                try:
+                    has_time = page.evaluate("() => /\\d{1,2}[:.:]\\d{2}/.test(document.body ? document.body.innerText || '' : '')")
+                    if has_time:
+                        self._emit("booking", "[RANDEVU] Önceki arama sonuçları (saat blokları) ekranda mevcut, arama adımı atlanıyor (hızlı yol).")
+                        needs_search = False
+                except Exception:
+                    pass
+            
+            if needs_search:
+                # Aramayı yap — grid oluşsun
+                self._search_flow(page, search_text, randevu_type, probe_subtimes=False)
+
+            # Şimdi grid'deki hedef slot'a tıkla ve onayla
+            result = self._book_specific_slot(
+                page,
+                book_target["date"],
+                book_target["hour"],
+                book_target["subtime"],
+            )
+            self.result["booking"] = result
+            return 0 if result.get("success") else 1
+
+        return self._search_flow(page, search_text, randevu_type, probe_subtimes=probe_subtimes)
 
     def _flow(self, page) -> int:
         """Geriye uyumluluk — login + search tek çağrıda."""

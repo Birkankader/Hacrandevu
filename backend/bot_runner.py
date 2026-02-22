@@ -38,13 +38,16 @@ class _TeeWriter:
         self._real.flush()
 
 
-def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) -> dict:
+def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
+                         probe_subtimes=False, book_target=None) -> dict:
     """Session-aware bot araması. Mevcut session varsa login atlar.
 
     Args:
         config: Bot yapılandırması (tc, birth_date, doctor, vb.)
         status_callback: fn(step, message) — her adımda çağrılır
         cancel_event: threading.Event — set edilirse bot iptal olur
+        probe_subtimes: True ise açık slotların alt-saatlerini keşfeder
+        book_target: {"date", "hour", "subtime"} — belirli randevuyu al
 
     Returns:
         {"status": str, "alternatives": list, "exit_code": int, "session_reused": bool}
@@ -73,6 +76,9 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
             search_args = dict(
                 search_text=config.get("doctor") or config.get("clinic") or "",
                 randevu_type=config.get("randevu_type", "internet randevu"),
+                probe_subtimes=probe_subtimes,
+                book=bool(book_target),
+                book_target=book_target,
             )
 
             if session_reused:

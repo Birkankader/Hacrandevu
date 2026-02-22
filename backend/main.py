@@ -152,14 +152,15 @@ async def ws_search(ws: WebSocket):
                     await ws.send_json({"type": "error", "message": "Hasta bulunamadı."})
                 continue
 
-            if action != "search":
+            if action not in ("search", "book"):
                 await ws.send_json({"type": "error", "message": f"Bilinmeyen action: {action}"})
                 continue
 
-            # ── Search action ──
+            # ── Search / Book action ──
             patient_id = msg.get("patient_id")
             search_text = msg.get("search_text", "")
             randevu_type = msg.get("randevu_type", "internet randevu")
+            book_target = msg.get("book_target")  # {"date","hour","subtime"}
 
             patient = get_patient(patient_id)
             if not patient:
@@ -177,7 +178,13 @@ async def ws_search(ws: WebSocket):
                 "randevu_type": randevu_type,
             }
 
-            await ws.send_json({"type": "status", "step": "init", "message": "Bot başlatılıyor..."})
+            if action == "book" and book_target:
+                init_msg = f"Randevu alınıyor: {book_target.get('date')} {book_target.get('subtime')}..."
+            elif action == "search":
+                init_msg = "Arama ve alt-saat keşfi başlatılıyor..."
+            else:
+                init_msg = "Bot başlatılıyor..."
+            await ws.send_json({"type": "status", "step": "init", "message": init_msg})
 
             loop = asyncio.get_event_loop()
             cancel_event = threading.Event()
@@ -192,24 +199,36 @@ async def ws_search(ws: WebSocket):
                 except Exception:
                     pass
 
-            # Bot'u bu hastaya özel thread'de çalıştır (Playwright sync API uyumluluğu için)
-            ce = cancel_event  # closure capture
-            sm = SessionManager()
+            ce = cancel_event
             tc = patient["tc_kimlik"]
-            executor = sm.get_executor(tc)
+            _bt = book_target if action == "book" else None
+            _probe = action == "search"
+
+            async def run_search_async():
+                try:
+                    sm = SessionManager()
+                    executor = sm.get_executor(tc)
+                    
+                    result = await loop.run_in_executor(
+                        executor,
+                        lambda: run_bot_with_session(
+                            bot_config, status_callback, cancel_event=ce,
+                            probe_subtimes=_probe, book_target=_bt,
+                        )
+                    )
+                    await ws.send_json({"type": "result", "data": result})
+
+                    session_status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
+                    await ws.send_json({"type": "session_status", "data": session_status})
+                except Exception as ex:
+                    try:
+                        await ws.send_json({"type": "error", "message": f"Arka plan işlemi hatası: {str(ex)}"})
+                    except Exception:
+                        pass
             
-            result = await loop.run_in_executor(
-                executor,
-                lambda: run_bot_with_session(bot_config, status_callback, cancel_event=ce),
-            )
-
-            cancel_event = None
-            await ws.send_json({"type": "result", "data": result})
-
-            # Arama sonrası session durumunu gönder
-            session_status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
-            await ws.send_json({"type": "session_status", "data": session_status})
-
+            # Aramayı arka planda başlat (while döngüsünün beklemesini engeller)
+            asyncio.create_task(run_search_async())
+            
     except WebSocketDisconnect:
         if cancel_event:
             cancel_event.set()

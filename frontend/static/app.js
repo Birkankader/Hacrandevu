@@ -4,6 +4,7 @@ const API = '/api/patients';
 let ws = null;
 let patients = [];
 let currentPatientId = null;
+let selectedSubtime = null; // {date, hour, subtime}
 
 // ─── Hasta CRUD ───
 
@@ -100,7 +101,6 @@ async function savePatient(e) {
         closePatientModal();
         await loadPatients();
 
-        // Yeni veya guncellenen hastayi sec
         const sel = document.getElementById('patientSelect');
         sel.value = saved.id;
         updateButtons();
@@ -183,7 +183,9 @@ const STEP_LABELS = {
     selecting_type: 'Randevu tipi seciliyor',
     analyzing: 'Slotlar analiz ediliyor',
     scanning: 'Alternatif taraniyor',
+    probing: 'Alt-saatler kesfediliyor',
     available: 'Musait slot bulundu',
+    booking: 'Randevu aliniyor',
     result: 'Sonuc',
     retry: 'Tekrar deneniyor',
     stdout: 'Islem',
@@ -199,7 +201,6 @@ function ensureWsConnection() {
             resolve(ws);
             return;
         }
-        // Eski WS varsa kapat
         if (ws) {
             try { ws.close(); } catch (e) {}
             ws = null;
@@ -243,7 +244,7 @@ function handleWsMessage(e) {
         const data = msg.data || {};
         updateSessionIndicator(data.active, data.logged_in);
     } else if (msg.type === 'pong') {
-        // keepalive response, ignore
+        // keepalive
     } else if (msg.type === 'session_closed') {
         updateSessionIndicator(false);
     }
@@ -259,12 +260,14 @@ async function startSearch() {
     }
 
     // UI hazirla
+    selectedSubtime = null;
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('resultSection').classList.add('hidden');
     document.getElementById('progressSteps').innerHTML = '';
     document.getElementById('progressSpinner').classList.remove('hidden');
-    document.getElementById('btnSearch').classList.add('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
     document.getElementById('btnCancel').classList.remove('hidden');
+    resetBookButton();
     seenSteps = new Set();
     searchInProgress = true;
 
@@ -285,11 +288,51 @@ async function startSearch() {
     }));
 }
 
+async function bookSelectedSlot() {
+    if (!selectedSubtime) {
+        alert('Lutfen bir saat secin.');
+        return;
+    }
+
+    const patientId = document.getElementById('patientSelect').value;
+    const searchText = document.getElementById('searchText').value.trim();
+
+    if (!patientId) {
+        alert('Lutfen bir hasta secin.');
+        return;
+    }
+
+    // UI hazirla
+    document.getElementById('progressSection').classList.remove('hidden');
+    document.getElementById('progressSteps').innerHTML = '';
+    document.getElementById('progressSpinner').classList.remove('hidden');
+    document.getElementById('actionButtons').classList.add('hidden');
+    document.getElementById('btnCancel').classList.remove('hidden');
+    seenSteps = new Set();
+    searchInProgress = true;
+
+    try {
+        await ensureWsConnection();
+    } catch (err) {
+        addProgressStep('error', err.message);
+        finishSearch();
+        return;
+    }
+
+    const randevuType = document.getElementById('randevuType').value;
+    ws.send(JSON.stringify({
+        action: 'book',
+        patient_id: parseInt(patientId),
+        search_text: searchText,
+        randevu_type: randevuType,
+        book_target: selectedSubtime,
+    }));
+}
+
 function addProgressStep(step, message) {
     const container = document.getElementById('progressSteps');
 
-    // Ayni step icin guncelle (stdout, scanning, available haric — bunlar tekrarlanabilir)
-    const repeatableSteps = new Set(['stdout', 'scanning', 'available']);
+    const repeatableSteps = new Set(['stdout', 'scanning', 'available', 'probing', 'booking']);
     if (!repeatableSteps.has(step) && seenSteps.has(step)) {
         const existing = document.querySelector(`[data-step="${step}"]`);
         if (existing) {
@@ -315,12 +358,10 @@ function addProgressStep(step, message) {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 
-    // Spinner text guncelle
     document.getElementById('spinnerText').textContent = cleanMessage(message);
 }
 
 function cleanMessage(msg) {
-    // [BILGI] [UYARI] gibi etiketleri kaldir
     return msg.replace(/^\[[\w]+\]\s*/i, '').trim();
 }
 
@@ -332,13 +373,23 @@ function cancelSearch() {
     document.getElementById('spinnerText').textContent = 'Iptal ediliyor...';
 }
 
+function resetBookButton() {
+    const btn = document.getElementById('btnBook');
+    btn.disabled = true;
+    btn.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Randevu Al`;
+}
+
 function finishSearch() {
     document.getElementById('progressSpinner').classList.add('hidden');
     document.getElementById('btnCancel').classList.add('hidden');
     document.getElementById('btnCancel').disabled = false;
-    document.getElementById('btnSearch').classList.remove('hidden');
+    document.getElementById('actionButtons').classList.remove('hidden');
     searchInProgress = false;
-    // WS'yi kapatma — session persistence icin acik tut
 }
 
 function showResult(data) {
@@ -347,54 +398,65 @@ function showResult(data) {
 
     const status = data.status || 'UNKNOWN';
     const totalAvailable = data.total_available || 0;
-    const totalVisible = data.total_visible || 0;
     const alternatives = data.alternatives || [];
     const sessionReused = data.session_reused || false;
-    // Geriye uyumluluk: eski format destegi
-    const slots = data.slots || { green: 0, red: 0, grey: 0, total: 0, details: [] };
+    const probedSubtimes = data.probed_subtimes || [];
+    const probedAltName = data.probed_alt_name || '';
+    const booking = data.booking;
 
     // Header
     const icon = document.getElementById('resultIcon');
     const title = document.getElementById('resultTitle');
     const subtitle = document.getElementById('resultSubtitle');
 
-    if (status === 'AVAILABLE' || status === 'POSSIBLY_AVAILABLE') {
+    if (booking) {
+        // Booking sonucu
+        if (booking.success) {
+            icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-blue-100 text-blue-600';
+            icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            title.textContent = 'Randevu Alindi!';
+            title.className = 'text-lg font-semibold text-blue-700';
+            subtitle.textContent = booking.message || '';
+        } else {
+            icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-yellow-100 text-yellow-600';
+            icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+            title.textContent = 'Randevu Alinamadi';
+            title.className = 'text-lg font-semibold text-yellow-700';
+            subtitle.textContent = booking.message || '';
+        }
+    } else if (status === 'AVAILABLE') {
         icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-green-100 text-green-600';
         icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
-        const availCount = alternatives.filter(a => a.status === 'AVAILABLE').length;
         title.textContent = 'Musait Randevu Bulundu!';
         title.className = 'text-lg font-semibold text-green-700';
-        subtitle.textContent = alternatives.length > 1
-            ? `${availCount}/${alternatives.length} alternatifde musait randevu (toplam ${totalAvailable} slot)`
+        subtitle.textContent = probedSubtimes.length > 0
+            ? `${probedSubtimes.reduce((s,p) => s + p.subtimes.length, 0)} alt-saat kesfedildi — asagidan secin`
             : `${totalAvailable} musait slot`;
     } else if (status === 'NOT_AVAILABLE') {
         icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-red-100 text-red-600';
         icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
         title.textContent = 'Uygun Randevu Bulunamadi';
         title.className = 'text-lg font-semibold text-red-700';
-        subtitle.textContent = alternatives.length > 1
-            ? `${alternatives.length} alternatif tarandi, hicbirinde musait slot yok.`
-            : 'Tum slotlar dolu veya kapali.';
+        subtitle.textContent = 'Tum slotlar dolu veya kapali.';
     } else if (status === 'ERROR') {
         icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-yellow-100 text-yellow-600';
-        icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+        icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>';
         title.textContent = 'Hata Olustu';
         title.className = 'text-lg font-semibold text-yellow-700';
         subtitle.textContent = data.error || 'Bilinmeyen hata.';
     } else {
         icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 text-gray-600';
-        icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        icon.innerHTML = '?';
         title.textContent = 'Durum Belirsiz';
         title.className = 'text-lg font-semibold text-gray-700';
         subtitle.textContent = 'Screenshot kontrol edin.';
     }
 
-    // Session reuse badge
     if (sessionReused) {
         subtitle.textContent += ' (oturum yeniden kullanildi)';
     }
 
-    // Alternatives list
+    // Content area
     const altList = document.getElementById('alternativesList');
     const slotGrid = document.getElementById('slotGrid');
     const slotSummary = document.getElementById('slotSummary');
@@ -402,12 +464,92 @@ function showResult(data) {
     slotGrid.innerHTML = '';
     slotSummary.innerHTML = '';
 
-    if (alternatives.length > 0) {
-        // Her alternatif icin kart goster
+    // ── Alt-saat secim UI'i (probe sonuclari varsa) ──
+    if (probedSubtimes.length > 0 && !booking) {
+        selectedSubtime = null;
         slotGrid.classList.add('hidden');
         slotSummary.classList.add('hidden');
 
-        alternatives.forEach((alt, idx) => {
+        // Tarihe gore grupla
+        const byDate = {};
+        probedSubtimes.forEach(p => {
+            if (!byDate[p.date]) byDate[p.date] = [];
+            p.subtimes.forEach(st => {
+                byDate[p.date].push({ hour: p.hour, subtime: st });
+            });
+        });
+
+        // Alt name baslik
+        if (probedAltName) {
+            const altHeader = document.createElement('div');
+            altHeader.className = 'mb-3 p-2 bg-gray-50 rounded-lg';
+            altHeader.innerHTML = `<span class="text-sm font-medium text-gray-700">${probedAltName}</span>`;
+            altList.appendChild(altHeader);
+        }
+
+        Object.entries(byDate).forEach(([date, slots]) => {
+            const dateCard = document.createElement('div');
+            dateCard.className = 'mb-3';
+            dateCard.innerHTML = `<div class="text-sm font-semibold text-gray-800 mb-2">${date}</div>`;
+
+            const grid = document.createElement('div');
+            grid.className = 'flex flex-wrap gap-2';
+
+            slots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.className = 'subtime-btn px-3 py-2 rounded-lg border-2 text-sm font-medium transition '
+                    + 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100 hover:border-green-500';
+                btn.textContent = slot.subtime;
+                btn.dataset.date = date;
+                btn.dataset.hour = slot.hour;
+                btn.dataset.subtime = slot.subtime;
+
+                btn.addEventListener('click', () => {
+                    // Onceki secimi kaldir
+                    document.querySelectorAll('.subtime-btn').forEach(b => {
+                        b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500', 'text-blue-800');
+                        b.classList.add('border-green-300', 'bg-green-50', 'text-green-800');
+                    });
+                    // Yeni secim
+                    btn.classList.remove('border-green-300', 'bg-green-50', 'text-green-800');
+                    btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500', 'text-blue-800');
+
+                    selectedSubtime = {
+                        date: btn.dataset.date,
+                        hour: btn.dataset.hour,
+                        subtime: btn.dataset.subtime,
+                    };
+
+                    // "Randevu Al" butonunu aktif et
+                    const bookBtn = document.getElementById('btnBook');
+                    bookBtn.disabled = false;
+                    bookBtn.innerHTML = `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        ${btn.dataset.date} ${slot.subtime} Al`;
+                });
+
+                grid.appendChild(btn);
+            });
+
+            dateCard.appendChild(grid);
+            altList.appendChild(dateCard);
+        });
+
+        // Secim bilgisi
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700';
+        infoDiv.textContent = 'Randevu almak istediginiz saati secin, sonra "Randevu Al" butonuna tiklayin.';
+        altList.appendChild(infoDiv);
+
+    } else if (alternatives.length > 0 && !booking) {
+        // Klasik alternatif listesi (probe sonucu yoksa)
+        slotGrid.classList.add('hidden');
+        slotSummary.classList.add('hidden');
+
+        alternatives.forEach((alt) => {
             const appt = alt.appointments || {};
             const availSlots = appt.available_slots || [];
             const isAvail = alt.status === 'AVAILABLE' || alt.status === 'POSSIBLY_AVAILABLE';
@@ -419,7 +561,6 @@ function showResult(data) {
                 ? `${availSlots.length} musait`
                 : (alt.status === 'NOT_AVAILABLE' ? 'Dolu' : 'Belirsiz');
 
-            // Slotlari tarihe gore grupla
             const byDate = {};
             availSlots.forEach(slot => {
                 const date = slot.date || 'Tarih belirsiz';
@@ -427,7 +568,6 @@ function showResult(data) {
                 byDate[date].push(slot.time || slot.raw || '?');
             });
 
-            // Detay HTML olustur
             let detailHtml = '';
             if (isAvail && Object.keys(byDate).length > 0) {
                 detailHtml = Object.entries(byDate).map(([date, times]) => {
@@ -439,15 +579,12 @@ function showResult(data) {
                         <div class="flex flex-wrap gap-1 mt-0.5">${timeBadges}</div>
                     </div>`;
                 }).join('');
-            } else if (alt.formatted) {
-                detailHtml = `<p class="text-xs text-gray-500">${alt.formatted}</p>`;
             } else {
                 detailHtml = `<p class="text-xs text-gray-500">Gorünen: ${appt.total_visible || 0} slot</p>`;
             }
 
             const card = document.createElement('div');
             card.className = `border rounded-lg p-3 ${borderColor} cursor-pointer transition hover:shadow-sm`;
-
             card.innerHTML = `
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
@@ -466,7 +603,6 @@ function showResult(data) {
                 </div>
             `;
 
-            // Toggle detaylar
             card.addEventListener('click', () => {
                 const details = card.querySelector('.alt-details');
                 const chevron = card.querySelector('.alt-chevron');
@@ -474,7 +610,6 @@ function showResult(data) {
                 chevron.classList.toggle('rotate-180');
             });
 
-            // Musait olanlari varsayilan olarak ac
             if (isAvail) {
                 card.querySelector('.alt-details').classList.remove('hidden');
                 card.querySelector('.alt-chevron').classList.add('rotate-180');
@@ -482,43 +617,6 @@ function showResult(data) {
 
             altList.appendChild(card);
         });
-    } else {
-        // Tek sonuc — eski gorunum (geriye uyumluluk)
-        slotGrid.classList.remove('hidden');
-        slotSummary.classList.remove('hidden');
-
-        const details = slots.details || [];
-        details.forEach(slot => {
-            const div = document.createElement('div');
-            const colorClasses = {
-                green: 'bg-green-50 border-green-300 text-green-800',
-                red: 'bg-red-50 border-red-300 text-red-800',
-                grey: 'bg-gray-100 border-gray-300 text-gray-600',
-                unknown: 'bg-yellow-50 border-yellow-300 text-yellow-800',
-            };
-            div.className = `rounded-lg border p-2 text-center text-sm ${colorClasses[slot.color] || colorClasses.unknown}`;
-            div.textContent = slot.time || '—';
-            slotGrid.appendChild(div);
-        });
-
-        if (slots.total > 0) {
-            [
-                { label: 'Musait', count: slots.green, color: 'text-green-600' },
-                { label: 'Dolu', count: slots.red, color: 'text-red-600' },
-                { label: 'Kapali', count: slots.grey, color: 'text-gray-500' },
-            ].forEach(item => {
-                if (item.count > 0) {
-                    const span = document.createElement('span');
-                    span.className = `font-medium ${item.color}`;
-                    span.textContent = `${item.label}: ${item.count}`;
-                    slotSummary.appendChild(span);
-                }
-            });
-            const total = document.createElement('span');
-            total.className = 'text-gray-400';
-            total.textContent = `Toplam: ${slots.total}`;
-            slotSummary.appendChild(total);
-        }
     }
 
     // Screenshot link
