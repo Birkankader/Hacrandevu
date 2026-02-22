@@ -1,12 +1,7 @@
-"""Session Manager — Browser oturumlarını hasta bazında yönetir.
-
-Her hasta için tek bir browser session tutulur. Ardışık aramalarda
-login + captcha aşaması atlanarak doğrudan arama yapılır.
-"""
-
 import os
 import time
 import threading
+import concurrent.futures
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -64,6 +59,7 @@ class SessionManager:
             return
         self._initialized = True
         self._sessions: dict[str, BrowserSession] = {}
+        self._executors: dict[str, concurrent.futures.ThreadPoolExecutor] = {}
         self._session_lock = threading.Lock()
         self._cleanup_interval = 30  # saniye
         self._idle_timeout = SESSION_IDLE_TIMEOUT_MINUTES * 60
@@ -72,26 +68,35 @@ class SessionManager:
         )
         self._cleanup_thread.start()
 
+    def get_executor(self, tc: str) -> concurrent.futures.ThreadPoolExecutor:
+        """Hasta için adanmış tekil thread executor döndür."""
+        with self._session_lock:
+            if tc not in self._executors:
+                self._executors[tc] = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix=f"bot_{tc}"
+                )
+            return self._executors[tc]
+
     def get_session(self, tc: str) -> BrowserSession | None:
         """Mevcut ve canlı session'ı döndür, yoksa None."""
         with self._session_lock:
             bs = self._sessions.get(tc)
-            if bs is None:
-                return None
-            if not bs.is_page_alive():
-                self._close_session_unsafe(tc)
-                return None
-            bs.touch()
-            return bs
+        
+        if bs is None:
+            return None
+            
+        if not bs.is_page_alive():
+            self.close_session(tc)
+            return None
+        bs.touch()
+        return bs
 
     def create_session(self, tc: str, cfg: dict) -> BrowserSession:
         """Yeni browser session oluştur. Mevcut varsa kapat."""
         from scrapling.engines._browsers._stealth import StealthySession
 
-        with self._session_lock:
-            # Eski session varsa kapat
-            if tc in self._sessions:
-                self._close_session_unsafe(tc)
+        # Eski session varsa kapat
+        self.close_session(tc)
 
         # Per-patient profil dizini
         profile_dir = PROFILE_DIR / tc
@@ -127,15 +132,12 @@ class SessionManager:
         return bs
 
     def close_session(self, tc: str):
-        """Belirli bir hastanın session'ını kapat."""
+        """Belirli bir hastanın session'ını kapat. (Caller lock tutmamalı)"""
         with self._session_lock:
-            self._close_session_unsafe(tc)
-
-    def _close_session_unsafe(self, tc: str):
-        """Lock olmadan session kapat (caller lock tutuyor olmalı)."""
-        bs = self._sessions.pop(tc, None)
+            bs = self._sessions.pop(tc, None)
         if bs is None:
             return
+        
         try:
             if bs.page and not bs.page.is_closed():
                 bs.page.close()
@@ -148,35 +150,43 @@ class SessionManager:
 
     def close_all(self):
         """Tüm session'ları kapat (shutdown)."""
+        tcs = []
         with self._session_lock:
-            for tc in list(self._sessions.keys()):
-                self._close_session_unsafe(tc)
+            tcs = list(self._sessions.keys())
+        for tc in tcs:
+            self.close_session(tc)
 
     def get_status(self, tc: str) -> dict:
         """Session durumunu döndür."""
+        base_status = {"active": False, "logged_in": False, "idle_seconds": 0}
         with self._session_lock:
             bs = self._sessions.get(tc)
-            if bs is None:
-                return {"active": False, "logged_in": False, "idle_seconds": 0}
-            alive = bs.is_page_alive()
-            return {
-                "active": alive,
-                "logged_in": bs.logged_in and alive,
-                "idle_seconds": round(bs.idle_seconds),
-            }
+        
+        if bs is None:
+            return base_status
+            
+        alive = bs.is_page_alive()
+        return {
+            "active": alive,
+            "logged_in": bs.logged_in and alive,
+            "idle_seconds": round(bs.idle_seconds),
+        }
 
     def _cleanup_loop(self):
         """Daemon thread: idle timeout aşan session'ları kapat."""
         while True:
             time.sleep(self._cleanup_interval)
             try:
+                expired = []
                 with self._session_lock:
-                    expired = [
-                        tc for tc, bs in self._sessions.items()
-                        if bs.idle_seconds > self._idle_timeout
-                    ]
-                    for tc in expired:
-                        print(f"[SESSION] Idle timeout: {tc[:4]}**** — kapatılıyor")
-                        self._close_session_unsafe(tc)
+                    for tc, bs in self._sessions.items():
+                        if bs.idle_seconds > self._idle_timeout:
+                            expired.append(tc)
+                            
+                for tc in expired:
+                    print(f"[SESSION] Idle timeout: {tc[:4]}**** — kapatılıyor")
+                    # Session nesnelerini oluşturulduğu thread'de kapatmak en güvenlisi
+                    executor = self.get_executor(tc)
+                    executor.submit(self.close_session, tc)
             except Exception:
                 pass

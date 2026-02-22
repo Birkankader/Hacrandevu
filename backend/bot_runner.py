@@ -79,14 +79,23 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
                 # Mevcut session — arama sayfasına dönüp yeniden ara
                 bs.touch()
                 try:
-                    # Login sonrası kayıtlı URL'e git (temiz arama sayfası)
-                    if bs.search_url:
+                    # Login sonrası kayıtlı URL'e git yerine sayfayı temizle
+                    if bs.page.url == bs.search_url or ("public/main" in bs.page.url.lower()):
+                        # Zaten arama sayfasındayız, sadece UI'ı temizle (açık menü vb. kapat)
+                        bs.page.keyboard.press("Escape")
+                        time.sleep(0.3)
+                        bs.page.keyboard.press("Escape")
+                        time.sleep(0.3)
+                        bs.page.evaluate("document.body.click()")
+                        time.sleep(0.5)
+                    elif bs.search_url:
+                        # Farklı bir sayfaya düşülmüşse URL'e gitmeyi dene
                         bs.page.goto(bs.search_url, wait_until="networkidle", timeout=30000)
                         time.sleep(2)
+                    
                     exit_code = bot.run_with_page(
                         bs.page, skip_login=True, **search_args,
                     )
-                    bs.search_url = bs.page.url
                     bs.touch()
                 except BotCancelled:
                     raise
@@ -101,7 +110,7 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
                         bs.page, skip_login=False, **search_args,
                     )
                     bs.logged_in = True
-                    bs.search_url = bs.page.url
+                    bs.search_url = getattr(bot, 'post_login_url', '') or bs.page.url
                     bs.touch()
             else:
                 # Yeni session oluştur
@@ -114,7 +123,7 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None) 
                         bs.page, skip_login=False, **search_args,
                     )
                     bs.logged_in = True
-                    bs.search_url = bs.page.url
+                    bs.search_url = getattr(bot, 'post_login_url', '') or bs.page.url
                     bs.touch()
                 except (RecaptchaFailed, Exception) as e:
                     sm.close_session(patient_tc)

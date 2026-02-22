@@ -129,7 +129,10 @@ async def ws_search(ws: WebSocket):
                 patient = get_patient(patient_id) if patient_id else None
                 if patient:
                     sm = SessionManager()
-                    status = sm.get_status(patient["tc_kimlik"])
+                    loop = asyncio.get_running_loop()
+                    tc = patient["tc_kimlik"]
+                    executor = sm.get_executor(tc)
+                    status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
                     await ws.send_json({"type": "session_status", "data": status})
                 else:
                     await ws.send_json({"type": "session_status", "data": {"active": False, "logged_in": False, "idle_seconds": 0}})
@@ -140,7 +143,10 @@ async def ws_search(ws: WebSocket):
                 patient = get_patient(patient_id) if patient_id else None
                 if patient:
                     sm = SessionManager()
-                    sm.close_session(patient["tc_kimlik"])
+                    loop = asyncio.get_running_loop()
+                    tc = patient["tc_kimlik"]
+                    executor = sm.get_executor(tc)
+                    await loop.run_in_executor(executor, lambda: sm.close_session(tc))
                     await ws.send_json({"type": "session_closed"})
                 else:
                     await ws.send_json({"type": "error", "message": "Hasta bulunamadı."})
@@ -186,10 +192,14 @@ async def ws_search(ws: WebSocket):
                 except Exception:
                     pass
 
-            # Bot'u ayrı thread'de çalıştır (blocking I/O)
+            # Bot'u bu hastaya özel thread'de çalıştır (Playwright sync API uyumluluğu için)
             ce = cancel_event  # closure capture
+            sm = SessionManager()
+            tc = patient["tc_kimlik"]
+            executor = sm.get_executor(tc)
+            
             result = await loop.run_in_executor(
-                None,
+                executor,
                 lambda: run_bot_with_session(bot_config, status_callback, cancel_event=ce),
             )
 
@@ -197,8 +207,7 @@ async def ws_search(ws: WebSocket):
             await ws.send_json({"type": "result", "data": result})
 
             # Arama sonrası session durumunu gönder
-            sm = SessionManager()
-            session_status = sm.get_status(patient["tc_kimlik"])
+            session_status = await loop.run_in_executor(executor, lambda: sm.get_status(tc))
             await ws.send_json({"type": "session_status", "data": session_status})
 
     except WebSocketDisconnect:

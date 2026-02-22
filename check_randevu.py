@@ -1226,9 +1226,16 @@ class HacettepeBot:
         try:
             tag = search_field.evaluate("el => el.tagName.toLowerCase()")
             if tag == "vaadin-text-field":
-                search_field.locator("input").first.click()
+                target_input = search_field.locator("input").first
+                try:
+                    target_input.click(force=True, timeout=5000)
+                except Exception:
+                    target_input.evaluate("el => { el.focus(); el.click(); }")
             else:
-                search_field.click()
+                try:
+                    search_field.click(force=True, timeout=5000)
+                except Exception:
+                    search_field.evaluate("el => { el.focus(); el.click(); }")
             human_delay(200, 400)
             page.keyboard.press(SELECT_ALL_KEY)
             page.keyboard.press("Backspace")
@@ -1276,7 +1283,11 @@ class HacettepeBot:
 
                 if dialog_input:
                     print(f"  [ARAMA] Dialog içi arama alanı bulundu, yazılıyor...")
-                    dialog_input.click()
+                    try:
+                        dialog_input.click(force=True, timeout=5000)
+                    except Exception:
+                        dialog_input.evaluate("el => { el.focus(); el.click(); }")
+                    
                     human_delay(200, 400)
                     dialog_input.fill("")
                     page.keyboard.type(search_text[:20], delay=60)
@@ -2896,6 +2907,8 @@ class HacettepeBot:
 
         if not skip_login:
             self._login_flow(page)
+            # Login sonrası temiz arama sayfası URL'ini sakla
+            self.post_login_url = page.url
         else:
             # Session mevcut — direkt arama dene, başarısız olursa login'e düş
             self._emit("init", "[BILGI] Mevcut oturum kullanılıyor, login atlanıyor...")
