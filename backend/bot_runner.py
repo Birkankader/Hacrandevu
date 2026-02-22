@@ -87,27 +87,31 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                 bs.touch()
                 try:
                     # Login sonrası kayıtlı URL'e git yerine sayfayı temizle
-                    if bs.page.url == bs.search_url or ("public/main" in bs.page.url.lower()):
-                        # Zaten arama sayfasındayız, sadece UI'ı temizle (açık menü vb. kapat)
-                        bs.page.keyboard.press("Escape")
-                        time.sleep(0.3)
-                        bs.page.keyboard.press("Escape")
-                        time.sleep(0.3)
-                        bs.page.evaluate("document.body.click()")
-                        time.sleep(0.5)
-                    elif bs.search_url:
-                        # Farklı bir sayfaya düşülmüşse URL'e gitmeyi dene
-                        bs.page.goto(bs.search_url, wait_until="networkidle", timeout=30000)
-                        time.sleep(2)
-                    
+                    try:
+                        if bs.page.url == bs.search_url or ("public/main" in bs.page.url.lower()):
+                            bs.page.keyboard.press("Escape")
+                            time.sleep(0.3)
+                            bs.page.keyboard.press("Escape")
+                            time.sleep(0.3)
+                            bs.page.evaluate("document.body.click()")
+                            time.sleep(0.5)
+                        elif bs.search_url:
+                            bs.page.goto(bs.search_url, wait_until="networkidle", timeout=30000)
+                            time.sleep(2)
+                    except Exception as e:
+                        print(f"[SESSION] UI temizleme hatası (devam ediliyor): {e}")
+
                     exit_code = bot.run_with_page(
                         bs.page, skip_login=True, **search_args,
                     )
                     bs.touch()
                 except BotCancelled:
                     raise
-                except Exception:
+                except Exception as e:
                     # Session expire olmuş — yeniden login dene
+                    import traceback
+                    print(f"[SESSION] Oturum hatası, yeniden login: {e}")
+                    traceback.print_exc()
                     if status_callback:
                         status_callback("init", "[BILGI] Oturum geçersiz, yeniden giriş yapılıyor...")
                     sm.close_session(patient_tc)
