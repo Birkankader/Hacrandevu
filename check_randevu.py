@@ -1114,7 +1114,7 @@ class HacettepeBot:
                     hide_canvas=True,
                     allow_webgl=True,
                     network_idle=True,
-                    timeout=200000,       # 5 dk — page_action içindeki tüm flow için
+                    timeout=1800000,       # 30 dk — page_action içindeki tüm flow için
                     page_action=page_action,
                     locale="tr-TR",
                     timezone_id="Europe/Istanbul",
