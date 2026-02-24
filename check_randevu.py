@@ -1864,6 +1864,46 @@ class HacettepeBot:
             print(f"  [UNIT-COMBO] Seçenek seçme hatası ({option_text[:30]}): {e}")
             return False
 
+    def _click_next_week(self, page) -> bool:
+        """Sonraki hafta butonuna ('Sonra') tıkla."""
+        try:
+            # 1) "Sonra" metnini içeren link/buton ara
+            sonra_re = re.compile(r"Sonra", re.I)
+            for strategy in [
+                lambda: page.get_by_role("link", name=sonra_re).first,
+                lambda: page.get_by_role("button", name=sonra_re).first,
+                lambda: page.locator("a, button, vaadin-button, span").filter(has_text=sonra_re).first,
+            ]:
+                try:
+                    el = strategy()
+                    if el.count() > 0 and el.is_visible():
+                        el.click(timeout=5000)
+                        self._emit("scanning", "[BILGI] 'Sonra' butonuna tıklandı.")
+                        self._cancellable_sleep(3)
+                        return True
+                except Exception:
+                    continue
+
+            # 2) Sağ ok simgesi (→ veya >) içeren tıklanabilir element
+            arrow_re = re.compile(r"[→➜►▶>❯]")
+            for strategy in [
+                lambda: page.locator("a, button, vaadin-button, span").filter(has_text=arrow_re).first,
+            ]:
+                try:
+                    el = strategy()
+                    if el.count() > 0 and el.is_visible():
+                        el.click(timeout=5000)
+                        self._emit("scanning", "[BILGI] 'Sonra' ok butonuna tıklandı.")
+                        self._cancellable_sleep(3)
+                        return True
+                except Exception:
+                    continue
+
+            self._emit("scanning", "[UYARI] 'Sonra' butonu bulunamadı.")
+        except Exception as e:
+            print(f"  [NEXT-WEEK] Hata: {e}")
+        return False
+
     # ── Randevu çıkarma (metin bazlı) ──
 
     def _extract_appointments(self, page):
@@ -3255,7 +3295,25 @@ class HacettepeBot:
         # ── İlk seçimin randevu analizi ──
         self._emit("analyzing", "[BILGI] Randevular analiz ediliyor...")
         ts = datetime.now().isoformat()
-        appt_info = self._extract_appointments(page)
+        
+        combined_appt_info = {"available_slots": [], "total_visible": 0, "has_availability": False}
+        MAX_WEEKS = 10  # Sonsuz döngüye karşı güvenlik sınırı
+        for week in range(MAX_WEEKS):
+            self._check_cancelled()
+            appt_info = self._extract_appointments(page)
+            
+            combined_appt_info["available_slots"].extend(appt_info["available_slots"])
+            combined_appt_info["total_visible"] += appt_info["total_visible"]
+            if appt_info["has_availability"]:
+                combined_appt_info["has_availability"] = True
+                
+            # Sonraki haftaya geç — buton yoksa daha fazla hafta yok demektir
+            if not self._click_next_week(page):
+                self._emit("scanning", f"[BILGI] Toplam {week + 1} hafta tarandı (daha fazla hafta yok).")
+                break
+            self._emit("scanning", f"[BILGI] Hafta {week + 2} taranıyor...")
+        
+        appt_info = combined_appt_info
         self._screenshot(page, "debug-after-search")
 
         first_name = search_text
@@ -3316,7 +3374,23 @@ class HacettepeBot:
                     continue
 
                 self._cancellable_sleep(1)
-                opt_appt = self._extract_appointments(page)
+                
+                combined_opt_appt = {"available_slots": [], "total_visible": 0, "has_availability": False}
+                for week in range(MAX_WEEKS):
+                    self._check_cancelled()
+                    opt_appt = self._extract_appointments(page)
+                    
+                    combined_opt_appt["available_slots"].extend(opt_appt["available_slots"])
+                    combined_opt_appt["total_visible"] += opt_appt["total_visible"]
+                    if opt_appt["has_availability"]:
+                        combined_opt_appt["has_availability"] = True
+                        
+                    if not self._click_next_week(page):
+                        self._emit("scanning", f"[BILGI] {opt} için toplam {week + 1} hafta tarandı.")
+                        break
+                    self._emit("scanning", f"[BILGI] {opt} — hafta {week + 2} taranıyor...")
+                
+                opt_appt = combined_opt_appt
                 
                 # FİLTRELEME İŞLEMİ
                 if opt_appt["has_availability"]:
