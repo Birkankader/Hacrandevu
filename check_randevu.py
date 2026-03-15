@@ -70,8 +70,10 @@ def _validate_env():
             print(f"[HATA] Eksik ortam değişkeni: {key}")
             sys.exit(1)
 
-# Thread lock — eşzamanlı bot çalışmalarında CFG koruması
-_bot_lock = threading.Lock()
+# Thread lock — KALDIRILDI: CFG salt-okunur global, HacettepeBot kendi kopyasını alır.
+# Hasta bazlı sıralama SessionManager.get_executor (max_workers=1) ile sağlanır.
+# Global lock tüm hastaları birbirine bağlıyordu → 3 shadow + 1 web araması sıralı çalışıyordu.
+# _bot_lock = threading.Lock()  # DEVRE DIŞI
 
 # ─── Sabit dizinler ───
 BASE_DIR = Path(__file__).parent
@@ -1053,6 +1055,11 @@ class HacettepeBot:
         if config_override:
             self._cfg.update(config_override)
 
+        # Hasta bazlı artifact dizini — paralel çalışmada dosya çakışmasını önler
+        tc = self._cfg.get("tc", "default")
+        self._patient_artifacts = ARTIFACTS_DIR / tc[-4:]  # Son 4 hane (gizlilik)
+        self._patient_artifacts.mkdir(parents=True, exist_ok=True)
+
     def _check_cancelled(self):
         """İptal edilmiş mi kontrol et."""
         if self._cancel_event and self._cancel_event.is_set():
@@ -1072,8 +1079,8 @@ class HacettepeBot:
         if not self._cfg.get("save_screenshot", True):
             return
         try:
-            # full_page=False: Sadece viewport kaydedilir — büyük sayfalarda bellek tasarrufu
-            page.screenshot(path=str(ARTIFACTS_DIR / f"{name}.png"), full_page=False)
+            # Hasta bazlı artifact dizini — paralel çalışmada çakışma yok
+            page.screenshot(path=str(self._patient_artifacts / f"{name}.png"), full_page=False)
         except Exception:
             pass
 
@@ -3392,7 +3399,7 @@ class HacettepeBot:
             "alternatives": all_results,
         }
 
-        (ARTIFACTS_DIR / "last-result.json").write_text(
+        (self._patient_artifacts / "last-result.json").write_text(
             json.dumps(self.result, indent=2, ensure_ascii=False) + "\n"
         )
 
