@@ -21,9 +21,19 @@ class BrowserSession:
     logged_in: bool = False
     search_url: str = ""  # Login sonrası authenticated arama sayfası URL'i
     last_used: float = field(default_factory=time.time)
+    search_count: int = 0  # Bu session'da yapılan toplam arama sayısı
+
+    # N aramadan sonra session sıfırlanır (Chromium bellek birikmesini önler)
+    MAX_SEARCHES_BEFORE_RESET = int(os.getenv("MAX_SEARCHES_BEFORE_RESET", "20"))
 
     def touch(self):
         self.last_used = time.time()
+        self.search_count += 1
+
+    @property
+    def needs_reset(self) -> bool:
+        """Bellek birikmesini önlemek için session sıfırlanmalı mı?"""
+        return self.search_count >= self.MAX_SEARCHES_BEFORE_RESET
 
     @property
     def idle_seconds(self) -> float:
@@ -84,7 +94,13 @@ class SessionManager:
         
         if bs is None:
             return None
-            
+
+        # Bellek birikmesini önle: N aramadan sonra session'ı sıfırla
+        if bs.needs_reset:
+            print(f"[SESSION] {tc[:4]}**** — {bs.search_count} arama sonrası bellek temizliği için session sıfırlanıyor")
+            self.close_session(tc)
+            return None
+
         if not bs.is_page_alive():
             self.close_session(tc)
             return None
@@ -113,8 +129,13 @@ class SessionManager:
             timezone_id="Europe/Istanbul",
             google_search=False,
             user_data_dir=str(profile_dir),
+            extra_headers=None,
         )
         session.start()
+
+        # Chromium GC erişimi: --js-flags=--expose-gc
+        # Not: StealthySession bu flag'i desteklemiyorsa window.gc undefined olur
+        # ama evaluate("if (window.gc) window.gc()") güvenli şekilde atlanır.
 
         # Yeni sayfa aç
         page = session.context.new_page()

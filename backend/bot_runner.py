@@ -82,6 +82,10 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                 action_type=config.get("action_type", "notify"),
             )
 
+            # --- GC: Python tarafı temizlik ---
+            import gc
+            gc.collect()
+
             if session_reused:
                 # Mevcut session — arama sayfasına dönüp yeniden ara
                 bs.touch()
@@ -104,6 +108,11 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                     exit_code = bot.run_with_page(
                         bs.page, skip_login=True, **search_args,
                     )
+                    # --- GC: Chromium JS heap temizliği ---
+                    try:
+                        bs.page.evaluate("() => { if (window.gc) window.gc(); }")
+                    except Exception:
+                        pass
                     bs.touch()
                 except BotCancelled:
                     raise
@@ -122,6 +131,11 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                     )
                     bs.logged_in = True
                     bs.search_url = getattr(bot, 'post_login_url', '') or bs.page.url
+                    # --- GC: Chromium JS heap temizliği (session expire recovery) ---
+                    try:
+                        bs.page.evaluate("() => { if (window.gc) window.gc(); }")
+                    except Exception:
+                        pass
                     bs.touch()
             else:
                 # Yeni session oluştur
@@ -135,6 +149,11 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                     )
                     bs.logged_in = True
                     bs.search_url = getattr(bot, 'post_login_url', '') or bs.page.url
+                    # --- GC: Chromium JS heap temizliği (yeni session) ---
+                    try:
+                        bs.page.evaluate("() => { if (window.gc) window.gc(); }")
+                    except Exception:
+                        pass
                     bs.touch()
                 except (RecaptchaFailed, Exception) as e:
                     sm.close_session(patient_tc)
@@ -170,6 +189,9 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
             }
         finally:
             sys.stdout = real_stdout
+            # --- GC: Her arama sonrası Python bellek temizliği ---
+            import gc
+            gc.collect()
 
 
 def run_bot_search(config: dict, status_callback=None) -> dict:

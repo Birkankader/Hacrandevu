@@ -502,14 +502,16 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=
         except Exception:
             pass
 
-    # Strateji 3: Sayfa kaynağından regex ile
+    # Strateji 3: Sayfa kaynağından JS ile (page.content() tüm HTML'i belleğe çeker — memory leak)
     if not sitekey:
         try:
-            html = page.content()
-            match = re.search(r'(?:data-sitekey|sitekey)["\s:=]+["\']([A-Za-z0-9_-]{40})', html)
-            if match:
-                sitekey = match.group(1)
-                print(f"  [2captcha] Sitekey sayfa kaynağından alındı: {sitekey[:12]}...")
+            sitekey = page.evaluate("""() => {
+                var html = document.documentElement.outerHTML;
+                var m = html.match(/(?:data-sitekey|sitekey)["\\s:=]+["']([A-Za-z0-9_-]{40})/);
+                return m ? m[1] : null;
+            }""")
+            if sitekey:
+                print(f"  [2captcha] Sitekey JS ile bulundu: {sitekey[:12]}...")
         except Exception:
             pass
 
@@ -1067,8 +1069,11 @@ class HacettepeBot:
                 pass
 
     def _screenshot(self, page, name):
+        if not self._cfg.get("save_screenshot", True):
+            return
         try:
-            page.screenshot(path=str(ARTIFACTS_DIR / f"{name}.png"), full_page=True)
+            # full_page=False: Sadece viewport kaydedilir — büyük sayfalarda bellek tasarrufu
+            page.screenshot(path=str(ARTIFACTS_DIR / f"{name}.png"), full_page=False)
         except Exception:
             pass
 
@@ -1918,91 +1923,17 @@ class HacettepeBot:
         """
         result = {"available_slots": [], "total_visible": 0, "has_availability": False}
 
-        # Önce sayfadaki DOM yapısını anlamak için diagnostik
+        # Diagnostik: hafif versiyon (ağır DOM tarama kaldırıldı — memory leak kaynağıydı)
         try:
             diag = page.evaluate("""() => {
-                var info = {};
-                // Vaadin grid var mı?
-                info.vaadinGridCount = document.querySelectorAll('vaadin-grid').length;
-                info.vaadinGridCellCount = document.querySelectorAll('vaadin-grid-cell-content').length;
-                info.tableCount = document.querySelectorAll('table').length;
-                info.tdCount = document.querySelectorAll('td').length;
-
-                // Sayfadaki tüm metin içinde saat deseni ara
-                var bodyText = document.body ? document.body.innerText || '' : '';
-                var timeMatches = bodyText.match(/\\d{1,2}[:.:]\\d{2}/g);
-                info.timeMatchesInBody = timeMatches ? timeMatches.slice(0, 20) : [];
-
-                // Shadow DOM'lardaki element sayıları
-                var shadowHosts = document.querySelectorAll('*');
-                var shadowCount = 0;
-                for (var i = 0; i < shadowHosts.length; i++) {
-                    if (shadowHosts[i].shadowRoot) shadowCount++;
-                }
-                info.shadowHostCount = shadowCount;
-
-                // Vaadin grid shadow root içerikleri
-                var grids = document.querySelectorAll('vaadin-grid');
-                info.gridDetails = [];
-                for (var g = 0; g < grids.length; g++) {
-                    var grid = grids[g];
-                    var detail = {tag: grid.tagName, childCount: grid.children.length};
-                    if (grid.shadowRoot) {
-                        detail.shadowChildCount = grid.shadowRoot.children.length;
-                        detail.shadowHTML = grid.shadowRoot.innerHTML.substring(0, 500);
-                    }
-                    // Vaadin grid items
-                    if (grid.items) {
-                        detail.itemCount = grid.items.length;
-                        detail.firstItems = grid.items.slice(0, 3).map(function(it) {
-                            return JSON.stringify(it).substring(0, 200);
-                        });
-                    }
-                    info.gridDetails.push(detail);
-                }
-
-                // div/span içinde saat deseni olan elementleri doğrudan say
-                var allEls = document.querySelectorAll('div, span, td, th, a, button, p, label');
-                var timeCells = [];
-                var timeRe = /\d{1,2}[:.]\d{2}/;
-                for (var j = 0; j < allEls.length && timeCells.length < 30; j++) {
-                    var el = allEls[j];
-                    var txt = el.textContent || '';
-                    // Sadece kısa metinleri kontrol et (saat hücresi genelde kısadır)
-                    if (txt.length < 30 && timeRe.test(txt)) {
-                        var rect = el.getBoundingClientRect();
-                        timeCells.push({
-                            tag: el.tagName,
-                            text: txt.trim().substring(0, 50),
-                            class: (el.className || '').substring(0, 100),
-                            w: Math.round(rect.width),
-                            h: Math.round(rect.height),
-                            bg: window.getComputedStyle(el).backgroundColor
-                        });
-                    }
-                }
-                info.timeCellsFound = timeCells;
-
-                return info;
+                return {
+                    vaadinGridCount: document.querySelectorAll('vaadin-grid').length,
+                    tableCount: document.querySelectorAll('table').length,
+                    hasTime: /\\d{1,2}[:.:]\\d{2}/.test(document.body ? document.body.innerText || '' : '')
+                };
             }""")
-            print(f"  [APPOINTMENTS-DIAG] Vaadin grid: {diag.get('vaadinGridCount', 0)}, "
-                  f"cells: {diag.get('vaadinGridCellCount', 0)}, "
-                  f"tables: {diag.get('tableCount', 0)}, tds: {diag.get('tdCount', 0)}")
-            print(f"  [APPOINTMENTS-DIAG] Shadow hosts: {diag.get('shadowHostCount', 0)}")
-            print(f"  [APPOINTMENTS-DIAG] Body time matches: {diag.get('timeMatchesInBody', [])}")
-            time_cells = diag.get('timeCellsFound', [])
-            print(f"  [APPOINTMENTS-DIAG] Time cells found: {len(time_cells)}")
-            for tc in time_cells[:10]:
-                print(f"    {tc['tag']} text='{tc['text']}' class='{tc['class'][:50]}' "
-                      f"size={tc['w']}x{tc['h']} bg={tc['bg']}")
-            grid_details = diag.get('gridDetails', [])
-            for gd in grid_details:
-                print(f"  [APPOINTMENTS-DIAG] Grid: children={gd.get('childCount')}, "
-                      f"shadow={gd.get('shadowChildCount', 'N/A')}, "
-                      f"items={gd.get('itemCount', 'N/A')}")
-                if gd.get('firstItems'):
-                    for fi in gd['firstItems']:
-                        print(f"    Item: {fi[:150]}")
+            print(f"  [APPOINTMENTS-DIAG] grid={diag.get('vaadinGridCount', 0)}, "
+                  f"table={diag.get('tableCount', 0)}, hasTime={diag.get('hasTime')}")
         except Exception as e:
             print(f"  [APPOINTMENTS-DIAG] Diagnostik hatası: {e}")
 
@@ -2048,27 +1979,28 @@ class HacettepeBot:
                     return '';
                 }
 
-                // Shadow DOM dahil tüm elementleri topla
-                function collectAllElements(root, result) {
-                    if (!root) return;
-                    var children = root.children || root.childNodes || [];
-                    for (var i = 0; i < children.length; i++) {
-                        var child = children[i];
+                // Shadow DOM dahil elementleri topla (iterative — stack overflow koruması)
+                // Not: Bu array JS heap'te kalır, Python'a aktarılmaz.
+                // Sınır sadece aşırı büyük DOM'larda tarayıcı donmasını önlemek içindir.
+                var MAX_ELEMENTS = 50000;
+                var allEls = [];
+                var stack = [document.body];
+                while (stack.length > 0 && allEls.length < MAX_ELEMENTS) {
+                    var node = stack.pop();
+                    if (!node) continue;
+                    var children = node.children || [];
+                    for (var ci = children.length - 1; ci >= 0; ci--) {
+                        var child = children[ci];
                         if (child.nodeType === 1) {
-                            result.push(child);
-                            // Shadow root varsa içine dal
-                            if (child.shadowRoot) {
-                                collectAllElements(child.shadowRoot, result);
-                            }
-                            collectAllElements(child, result);
+                            allEls.push(child);
+                            stack.push(child);
+                            if (child.shadowRoot) stack.push(child.shadowRoot);
                         }
                     }
                 }
 
                 // Tarih başlıklarını topla (pozisyon bazlı eşleştirme için)
                 var dateHeaders = [];
-                var allEls = [];
-                collectAllElements(document.body, allEls);
 
                 var dateHdrRe = /^\s*\d{1,2}\s+[A-Za-zçğıöşüÇĞİÖŞÜ]+\s*$/;
                 for (var h = 0; h < allEls.length; h++) {
@@ -2186,7 +2118,9 @@ class HacettepeBot:
             return "NOT_AVAILABLE"
 
         try:
-            body = re.sub(r"\s+", " ", page.locator("body").inner_text()).strip()
+            # inner_text() yerine JS ile sınırlı metin al (bellek koruması)
+            body = page.evaluate("() => (document.body ? document.body.innerText || '' : '').substring(0, 2000)")
+            body = re.sub(r"\s+", " ", body).strip()
         except Exception:
             body = ""
 
@@ -2235,14 +2169,21 @@ class HacettepeBot:
         }
 
         function collectAllElements(root, result) {
-            if (!root) return;
-            var ch = root.children || root.childNodes || [];
-            for (var i = 0; i < ch.length; i++) {
-                var c = ch[i];
-                if (c.nodeType === 1) {
-                    result.push(c);
-                    if (c.shadowRoot) collectAllElements(c.shadowRoot, result);
-                    collectAllElements(c, result);
+            // Iterative DFS — recursive çağrı stack overflow riskini önler.
+            // Array JS heap'te kalır, Python'a aktarılmaz.
+            var MAX_ELEMENTS = 50000;
+            var stack = [root];
+            while (stack.length > 0 && result.length < MAX_ELEMENTS) {
+                var node = stack.pop();
+                if (!node) continue;
+                var ch = node.children || [];
+                for (var ci = ch.length - 1; ci >= 0; ci--) {
+                    var c = ch[ci];
+                    if (c.nodeType === 1) {
+                        result.push(c);
+                        stack.push(c);
+                        if (c.shadowRoot) stack.push(c.shadowRoot);
+                    }
                 }
             }
         }
@@ -2842,7 +2783,9 @@ class HacettepeBot:
         if slot_info["green"] > 0:
             return "AVAILABLE"
         try:
-            body = re.sub(r"\s+", " ", page.locator("body").inner_text()).strip()
+            # inner_text() yerine JS ile sınırlı metin al (bellek koruması)
+            body = page.evaluate("() => (document.body ? document.body.innerText || '' : '').substring(0, 2000)")
+            body = re.sub(r"\s+", " ", body).strip()
         except Exception:
             body = ""
         neg = any(p.search(body) for p in NEGATIVE_PATTERNS)
@@ -2864,14 +2807,14 @@ class HacettepeBot:
         try:
             slot_data = page.evaluate("""() => {
                 const slots = {green: 0, red: 0, grey: 0, total: 0, details: []};
+                const MAX_DETAILS = 30;
 
-                // Strateji 1: background-color veya color CSS'i olan hücreleri tara
+                // Hedefli seçiciler — [style*="..."] kaldırıldı (tüm DOM'u döndürüyordu)
                 const allElements = document.querySelectorAll(
                     'td, th, div, span, button, vaadin-grid-cell-content, ' +
                     '[class*="slot"], [class*="randevu"], [class*="saat"], ' +
                     '[class*="available"], [class*="full"], [class*="closed"], ' +
-                    '[class*="green"], [class*="red"], [class*="grey"], [class*="gray"], ' +
-                    '[style*="background"], [style*="color"]'
+                    '[class*="green"], [class*="red"], [class*="grey"], [class*="gray"]'
                 );
 
                 for (const el of allElements) {
@@ -2916,19 +2859,23 @@ class HacettepeBot:
                         if (isGreen) {
                             slots.green++;
                             slots.total++;
-                            slots.details.push({time: text.substring(0, 50), color: 'green', bg: bg});
+                            if (slots.details.length < MAX_DETAILS)
+                                slots.details.push({time: text.substring(0, 50), color: 'green', bg: bg});
                         } else if (isRed) {
                             slots.red++;
                             slots.total++;
-                            slots.details.push({time: text.substring(0, 50), color: 'red', bg: bg});
+                            if (slots.details.length < MAX_DETAILS)
+                                slots.details.push({time: text.substring(0, 50), color: 'red', bg: bg});
                         } else if (isGrey) {
                             slots.grey++;
                             slots.total++;
-                            slots.details.push({time: text.substring(0, 50), color: 'grey', bg: bg});
+                            if (slots.details.length < MAX_DETAILS)
+                                slots.details.push({time: text.substring(0, 50), color: 'grey', bg: bg});
                         } else if (hasTime) {
                             // Saat var ama renk belirsiz — ekle
                             slots.total++;
-                            slots.details.push({time: text.substring(0, 50), color: 'unknown', bg: bg});
+                            if (slots.details.length < MAX_DETAILS)
+                                slots.details.push({time: text.substring(0, 50), color: 'unknown', bg: bg});
                         }
                     }
                 }
@@ -3448,6 +3395,12 @@ class HacettepeBot:
         (ARTIFACTS_DIR / "last-result.json").write_text(
             json.dumps(self.result, indent=2, ensure_ascii=False) + "\n"
         )
+
+        # --- Bellek temizliği: büyük veri yapılarını serbest bırak ---
+        del all_results
+        import gc
+        gc.collect()
+
         if cfg["save_screenshot"]:
             self._screenshot(page, "last-check")
 

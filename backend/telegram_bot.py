@@ -14,6 +14,34 @@ user_states = {}
 # Probed subtimes cache: patient_id -> {"{date}|{hour}": [subtimes]}
 # Scheduler sonuç bulunca burada saklar, kullanıcı ana saat seçince buradan alır
 _probed_cache: dict[int, dict[str, list[str]]] = {}
+_probed_cache_ts: dict[int, float] = {}  # patient_id -> timestamp
+_PROBED_CACHE_TTL = 600  # 10 dakika — kullanılmayan cache otomatik silinir
+_PROBED_CACHE_MAX_SIZE = 50  # Maksimum cache girişi
+
+
+def _probed_cache_set(patient_id: int, data: dict[str, list[str]]):
+    """Cache'e yaz — boyut sınırı ve TTL ile."""
+    import time as _time
+    # Boyut sınırını aşarsa en eski girişleri temizle
+    if len(_probed_cache) >= _PROBED_CACHE_MAX_SIZE:
+        oldest_pid = min(_probed_cache_ts, key=_probed_cache_ts.get)
+        _probed_cache.pop(oldest_pid, None)
+        _probed_cache_ts.pop(oldest_pid, None)
+    _probed_cache[patient_id] = data
+    _probed_cache_ts[patient_id] = _time.time()
+
+
+def _probed_cache_get(patient_id: int) -> dict[str, list[str]] | None:
+    """Cache'den oku — TTL dolmuşsa None döndür."""
+    import time as _time
+    ts = _probed_cache_ts.get(patient_id)
+    if ts is None:
+        return None
+    if _time.time() - ts > _PROBED_CACHE_TTL:
+        _probed_cache.pop(patient_id, None)
+        _probed_cache_ts.pop(patient_id, None)
+        return None
+    return _probed_cache.get(patient_id)
 
 # Sabit buton seçenekleri
 DATE_PRESETS = [
@@ -142,7 +170,7 @@ async def _handle_update(update: dict, token: str, client: httpx.AsyncClient):
                 hour_str = parts[3]
 
                 cache_key = f"{date_str}|{hour_str}"
-                subtimes = _probed_cache.get(p_id, {}).get(cache_key, [])
+                subtimes = (_probed_cache_get(p_id) or {}).get(cache_key, [])
 
                 if subtimes:
                     buttons = []

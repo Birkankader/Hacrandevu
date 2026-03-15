@@ -14,6 +14,9 @@ _stop_event = asyncio.Event()
 # Registry to track active running tasks by monitor ID so we can cancel them on deletion
 _active_runs: dict[int, threading.Event] = {}
 
+# Track running asyncio tasks to prevent overlapping and enable cleanup
+_running_tasks: dict[int, asyncio.Task] = {}
+
 def cancel_monitor(monitor_id: int):
     """Signals a running monitor instance to abort immediately."""
     if monitor_id in _active_runs:
@@ -90,6 +93,9 @@ async def _run_monitor(monitor: dict, loop: asyncio.AbstractEventLoop):
         print(f"[SHADOW] Hata oluştu (Monitor ID: {monitor['id']}): {e}")
     finally:
         _active_runs.pop(monitor["id"], None)
+        # --- GC: Her monitor çalışması sonrası Python bellek temizliği ---
+        import gc
+        gc.collect()
 
 
 async def _handle_monitor_result(monitor: dict, patient: dict, result: dict, action_type: str):
@@ -138,12 +144,13 @@ async def _handle_monitor_result(monitor: dict, patient: dict, result: dict, act
             return
 
         # Alt-saatleri cache'e yaz (telegram_bot.py okuyacak)
-        from backend.telegram_bot import _probed_cache
+        from backend.telegram_bot import _probed_cache_set
         p_id = patient["id"]
-        _probed_cache[p_id] = {}
+        cache_data = {}
         for item in filtered:
             cache_key = f"{item['date']}|{item['hour']}"
-            _probed_cache[p_id][cache_key] = item["subtimes"]
+            cache_data[cache_key] = item["subtimes"]
+        _probed_cache_set(p_id, cache_data)
 
         # Ana saat butonlarını oluştur (tarih + ana saat)
         text = (
@@ -311,11 +318,36 @@ async def monitor_loop():
                         should_run = True
 
                 if should_run:
-                    # Run this monitor in a background task so we don't block the scheduler loop
-                    asyncio.create_task(_run_monitor(mon, loop))
+                    # Bu monitor zaten çalışıyorsa tekrar tetikleme
+                    existing_task = _running_tasks.get(mon["id"])
+                    if existing_task and not existing_task.done():
+                        print(f"[SHADOW] Monitor #{mon['id']} zaten çalışıyor, atlanıyor.")
+                        continue
+
+                    # Biten task'ları temizle
+                    done_ids = [mid for mid, t in _running_tasks.items() if t.done()]
+                    for mid in done_ids:
+                        task = _running_tasks.pop(mid)
+                        # Exception varsa logla (sessiz hata önleme)
+                        if task.exception():
+                            print(f"[SHADOW] Monitor #{mid} task hatası: {task.exception()}")
+
+                    # Run this monitor in a background task
+                    task = asyncio.create_task(_run_monitor(mon, loop))
+                    _running_tasks[mon["id"]] = task
                     
         except Exception as e:
             print(f"[SHADOW] Scheduler döngü hatası: {e}")
+
+        # Biten task'ları temizle (bellek sızıntısı önleme)
+        done_ids = [mid for mid, t in _running_tasks.items() if t.done()]
+        for mid in done_ids:
+            task = _running_tasks.pop(mid)
+            try:
+                if task.exception():
+                    print(f"[SHADOW] Monitor #{mid} task hatası (temizlik): {task.exception()}")
+            except (asyncio.CancelledError, asyncio.InvalidStateError):
+                pass
 
         # Sleep for 60 seconds, waking up early if _stop_event is set
         try:
