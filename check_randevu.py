@@ -75,6 +75,12 @@ def _validate_env():
 # Global lock tüm hastaları birbirine bağlıyordu → 3 shadow + 1 web araması sıralı çalışıyordu.
 # _bot_lock = threading.Lock()  # DEVRE DIŞI
 
+# Booking lock — sadece randevu ALMA işlemlerini sıralamak için.
+# Taramalar (scan/probe) paralel çalışmaya devam eder.
+# Booking'ler ise sıralı çalışır — Playwright eşzamanlı sayfa etkileşimlerinde
+# (click, dialog, confirm) çakışma yaşayabiliyor.
+_booking_lock = threading.Lock()
+
 # ─── Sabit dizinler ───
 BASE_DIR = Path(__file__).parent
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
@@ -2459,7 +2465,7 @@ class HacettepeBot:
     def _book_specific_slot(self, page, target_date, target_hour, target_subtime):
         """Belirli bir tarih/saat/alt-saat için randevu alır.
 
-        1. Grid'deki saat bloğunu tıkla
+        1. Grid'deki saat bloğunu tıkla (gerekirse haftalarda gezinerek bul)
         2. Dialog'daki alt-saati tıkla
         3. Onay butonuna tıkla
 
@@ -2468,7 +2474,22 @@ class HacettepeBot:
         """
         self._emit("booking", f"[RANDEVU] Slot tıklanıyor: {target_date} {target_hour}")
 
-        if not self._click_grid_slot(page, target_date, target_hour):
+        clicked = self._click_grid_slot(page, target_date, target_hour)
+
+        # Slot mevcut sayfada bulunamadıysa haftalarda gezinerek ara
+        if not clicked:
+            self._emit("booking", f"[RANDEVU] Slot mevcut haftada bulunamadı, sonraki haftalarda aranıyor...")
+            for week_attempt in range(10):
+                self._check_cancelled()
+                if not self._click_next_week(page):
+                    break
+                self._cancellable_sleep(1)
+                clicked = self._click_grid_slot(page, target_date, target_hour)
+                if clicked:
+                    self._emit("booking", f"[RANDEVU] Slot {week_attempt + 2}. haftada bulundu!")
+                    break
+
+        if not clicked:
             return {"success": False, "message": f"Saat bloğu tıklanamadı: {target_date} {target_hour}"}
 
         self._cancellable_sleep(2)
@@ -3488,33 +3509,26 @@ class HacettepeBot:
         if book and book_target:
             self._emit("booking", f"[RANDEVU] Arama + randevu alma: {book_target}")
 
-            # result dict'i hazırla (fast-path'de _search_flow çağrılmayabilir)
             if self.result is None:
                 self.result = {}
 
-            # Fast-path: Eğer session yeniden kullanılmışsa (skip_login=True)
-            # ve saat blokları ekranda zaten varsa, arama adımını atla.
-            needs_search = True
-            if skip_login:
-                try:
-                    has_time = page.evaluate("() => /\\d{1,2}[:.:]\\d{2}/.test(document.body ? document.body.innerText || '' : '')")
-                    if has_time:
-                        self._emit("booking", "[RANDEVU] Önceki arama sonuçları (saat blokları) ekranda mevcut, arama adımı atlanıyor (hızlı yol).")
-                        needs_search = False
-                except Exception:
-                    pass
-
-            if needs_search:
-                # Aramayı yap — grid oluşsun (bildirim gönderme, sadece grid hazırla)
+            # Booking lock: eşzamanlı booking'leri sıraya al.
+            # Taramalar paralel çalışır ama booking'ler tek tek işlenir —
+            # Playwright aynı anda birden fazla karmaşık sayfa etkileşiminde çakışıyor.
+            self._emit("booking", "[RANDEVU] Booking kilidi bekleniyor...")
+            with _booking_lock:
+                self._emit("booking", "[RANDEVU] Booking kilidi alındı, taze arama yapılıyor...")
                 self._search_flow(page, search_text, randevu_type, probe_subtimes=False, action_type="silent")
 
-            # Şimdi grid'deki hedef slot'a tıkla ve onayla
-            booking_result = self._book_specific_slot(
-                page,
-                book_target["date"],
-                book_target["hour"],
-                book_target["subtime"],
-            )
+                # Şimdi grid'deki hedef slot'a tıkla ve onayla
+                booking_result = self._book_specific_slot(
+                    page,
+                    book_target["date"],
+                    book_target["hour"],
+                    book_target["subtime"],
+                )
+
+            self._emit("booking", "[RANDEVU] Booking kilidi serbest bırakıldı.")
             self.result["booking"] = booking_result
             return 0 if booking_result.get("success") else 1
 

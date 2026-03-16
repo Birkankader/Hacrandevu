@@ -309,12 +309,21 @@ def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, 
     if not patient:
         return
 
-    # search_text verilmemişse aktif monitor'dan al
+    # search_text ve randevu_type bilgisini aktif monitor'dan al
+    randevu_type = "internetten randevu"
     if not search_text:
         monitors = get_active_monitors()
         for m in monitors:
             if m["patient_id"] == patient_id:
                 search_text = m["search_text"]
+                randevu_type = m.get("randevu_type", randevu_type)
+                break
+    else:
+        # search_text verilmişse bile randevu_type'ı monitor'dan al
+        monitors = get_active_monitors()
+        for m in monitors:
+            if m["patient_id"] == patient_id and m["search_text"] == search_text:
+                randevu_type = m.get("randevu_type", randevu_type)
                 break
 
     # Booking başlamadan önce bu hastanın tüm monitor'larını kapat
@@ -332,7 +341,7 @@ def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, 
         "birth_date": patient["dogum_tarihi"],
         "phone": patient.get("phone", ""),
         "doctor": search_text,
-        "randevu_type": "internetten randevu",
+        "randevu_type": randevu_type,
     }
 
     book_target = {
@@ -348,8 +357,11 @@ def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, 
         msg = ""
         try:
             print(f"[BOOKING] Randevu alma başlatılıyor: {date_str} {subtime_str or time_str}")
+            print(f"[BOOKING] bot_config: doctor={bot_config.get('doctor')}, randevu_type={bot_config.get('randevu_type')}")
+            print(f"[BOOKING] book_target: {book_target}")
             res = run_bot_with_session(bot_config, book_target=book_target)
             print(f"[BOOKING] Bot sonucu: {res.get('status')} | booking={res.get('booking')}")
+            print(f"[BOOKING] Tam sonuç: {res}")
             booking = res.get("booking", {})
             if booking.get("success"):
                 success = True

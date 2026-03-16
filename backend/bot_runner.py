@@ -106,9 +106,20 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
             # Mevcut session — arama sayfasına dönüp yeniden ara
             bs.touch()
             try:
-                # Login sonrası kayıtlı URL'e git yerine sayfayı temizle
+                # Booking yapılacaksa agresif Escape temizliği atlansın —
+                # Escape bazı Vaadin uygulamalarında sayfa durumunu bozabiliyor.
+                # Booking zaten taze arama yapacak (run_with_page içinde).
                 try:
-                    if bs.page.url == bs.search_url or ("public/main" in bs.page.url.lower()):
+                    if book_target:
+                        # Booking: sadece açık dialog varsa kapat
+                        try:
+                            d = bs.page.locator("vaadin-dialog-overlay")
+                            if d.count() > 0 and d.first.is_visible():
+                                bs.page.keyboard.press("Escape")
+                                time.sleep(0.5)
+                        except Exception:
+                            pass
+                    elif bs.page.url == bs.search_url or ("public/main" in bs.page.url.lower()):
                         bs.page.keyboard.press("Escape")
                         time.sleep(0.3)
                         bs.page.keyboard.press("Escape")
