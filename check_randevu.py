@@ -1922,6 +1922,45 @@ class HacettepeBot:
             print(f"  [NEXT-WEEK] Hata: {e}")
         return False
 
+    def _click_prev_week(self, page) -> bool:
+        """Önceki hafta butonuna ('Önce') tıkla."""
+        try:
+            once_re = re.compile(r"[öÖ]nce", re.I)
+            for strategy in [
+                lambda: page.get_by_role("link", name=once_re).first,
+                lambda: page.get_by_role("button", name=once_re).first,
+                lambda: page.locator("a, button, vaadin-button, span").filter(has_text=once_re).first,
+            ]:
+                try:
+                    el = strategy()
+                    if el.count() > 0 and el.is_visible():
+                        el.click(timeout=5000)
+                        self._emit("booking", "[BILGI] 'Önce' butonuna tıklandı.")
+                        self._cancellable_sleep(3)
+                        return True
+                except Exception:
+                    continue
+
+            # Fallback: sol ok simgesi
+            arrow_re = re.compile(r"[←◄◀<❮]")
+            for strategy in [
+                lambda: page.locator("a, button, vaadin-button, span").filter(has_text=arrow_re).first,
+            ]:
+                try:
+                    el = strategy()
+                    if el.count() > 0 and el.is_visible():
+                        el.click(timeout=5000)
+                        self._emit("booking", "[BILGI] 'Önce' ok butonuna tıklandı.")
+                        self._cancellable_sleep(3)
+                        return True
+                except Exception:
+                    continue
+
+            self._emit("booking", "[UYARI] 'Önce' butonu bulunamadı.")
+        except Exception as e:
+            print(f"  [PREV-WEEK] Hata: {e}")
+        return False
+
     # ── Randevu çıkarma (metin bazlı) ──
 
     def _extract_appointments(self, page):
@@ -2478,7 +2517,20 @@ class HacettepeBot:
 
         # Slot mevcut sayfada bulunamadıysa haftalarda gezinerek ara
         if not clicked:
-            self._emit("booking", f"[RANDEVU] Slot mevcut haftada bulunamadı, sonraki haftalarda aranıyor...")
+            # Önce GERİ git (arama tüm haftaları tarayıp en sona bırakmış olabilir)
+            self._emit("booking", f"[RANDEVU] Slot mevcut haftada bulunamadı, önceki haftalara dönülüyor...")
+            for _ in range(10):
+                self._check_cancelled()
+                if not self._click_prev_week(page):
+                    break
+                clicked = self._click_grid_slot(page, target_date, target_hour)
+                if clicked:
+                    self._emit("booking", f"[RANDEVU] Slot önceki haftada bulundu!")
+                    break
+
+        if not clicked:
+            # Sonra İLERİ git
+            self._emit("booking", f"[RANDEVU] Önceki haftalarda bulunamadı, sonraki haftalarda aranıyor...")
             for week_attempt in range(10):
                 self._check_cancelled()
                 if not self._click_next_week(page):
@@ -2486,7 +2538,7 @@ class HacettepeBot:
                 self._cancellable_sleep(1)
                 clicked = self._click_grid_slot(page, target_date, target_hour)
                 if clicked:
-                    self._emit("booking", f"[RANDEVU] Slot {week_attempt + 2}. haftada bulundu!")
+                    self._emit("booking", f"[RANDEVU] Slot sonraki haftada bulundu!")
                     break
 
         if not clicked:
@@ -3424,11 +3476,6 @@ class HacettepeBot:
             json.dumps(self.result, indent=2, ensure_ascii=False) + "\n"
         )
 
-        # --- Bellek temizliği: büyük veri yapılarını serbest bırak ---
-        del all_results
-        import gc
-        gc.collect()
-
         if cfg["save_screenshot"]:
             self._screenshot(page, "last-check")
 
@@ -3467,7 +3514,13 @@ class HacettepeBot:
                     self.result["probed_alt_name"] = best_alt
                     self._emit("probing", f"[PROBE] Toplam {sum(len(p['subtimes']) for p in probed)} alt-saat keşfedildi")
 
+            # --- Bellek temizliği: büyük veri yapılarını serbest bırak ---
+            del all_results
+            import gc; gc.collect()
             return 0
+        # --- Bellek temizliği ---
+        del all_results
+        import gc; gc.collect()
         if overall_status == "NOT_AVAILABLE":
             self._emit("result", f"[{ts}] Hiçbir alternatifde uygun randevu bulunamadı.")
             return 2
