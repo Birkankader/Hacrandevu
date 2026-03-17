@@ -17,6 +17,9 @@ _active_runs: dict[int, threading.Event] = {}
 # Track running asyncio tasks to prevent overlapping and enable cleanup
 _running_tasks: dict[int, asyncio.Task] = {}
 
+# Scheduler task referansı — GC'nin task'ı toplamasını önler
+_scheduler_task: asyncio.Task | None = None
+
 def cancel_monitor(monitor_id: int):
     """Signals a running monitor instance to abort immediately."""
     if monitor_id in _active_runs:
@@ -329,9 +332,11 @@ async def monitor_loop():
                     done_ids = [mid for mid, t in _running_tasks.items() if t.done()]
                     for mid in done_ids:
                         task = _running_tasks.pop(mid)
-                        # Exception varsa logla (sessiz hata önleme)
-                        if task.exception():
-                            print(f"[SHADOW] Monitor #{mid} task hatası: {task.exception()}")
+                        try:
+                            if task.exception():
+                                print(f"[SHADOW] Monitor #{mid} task hatası: {task.exception()}")
+                        except (asyncio.CancelledError, asyncio.InvalidStateError):
+                            pass
 
                     # Run this monitor in a background task
                     task = asyncio.create_task(_run_monitor(mon, loop))
@@ -361,8 +366,14 @@ async def monitor_loop():
 
 def start_scheduler():
     """Starts the scheduler as a background asyncio task."""
+    global _scheduler_task
     _stop_event.clear()
-    asyncio.create_task(monitor_loop())
+    # Zaten çalışan scheduler varsa tekrar başlatma
+    if _scheduler_task is not None and not _scheduler_task.done():
+        print("[SHADOW] Scheduler zaten çalışıyor, yeni task oluşturulmadı.")
+        return
+    # Referansı sakla — GC'nin task'ı toplamasını önler
+    _scheduler_task = asyncio.create_task(monitor_loop())
 
 
 def stop_scheduler():
