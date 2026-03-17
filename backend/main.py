@@ -2,12 +2,15 @@
 
 import asyncio
 import json
+import sys
 import threading
+from collections import deque
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -23,6 +26,57 @@ from backend.telegram_bot import start_telegram_poller, stop_telegram_poller
 BASE_DIR = Path(__file__).parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
+LOG_DIR = BASE_DIR / "logs"
+LOG_FILE = LOG_DIR / "app.log"
+
+# ─── Log dosyasına tee (tüm print çıktılarını yakala) ───
+_MAX_LOG_SIZE = 10 * 1024 * 1024  # 10 MB — aşarsa baştan yaz
+
+
+class _LogTee:
+    """stdout/stderr çıktılarını hem orijinal stream'e hem log dosyasına yazar."""
+
+    def __init__(self, original, log_fh):
+        self.original = original
+        self.log_fh = log_fh
+
+    def write(self, text):
+        self.original.write(text)
+        if text.strip():
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.log_fh.write(f"[{ts}] {text}")
+            if not text.endswith("\n"):
+                self.log_fh.write("\n")
+            self.log_fh.flush()
+
+    def flush(self):
+        self.original.flush()
+        self.log_fh.flush()
+
+    # io TextIOBase uyumluluğu
+    def fileno(self):
+        return self.original.fileno()
+
+    @property
+    def encoding(self):
+        return getattr(self.original, "encoding", "utf-8")
+
+
+def _setup_file_logging():
+    LOG_DIR.mkdir(exist_ok=True)
+    # Dosya çok büyükse eski logu yedekle
+    if LOG_FILE.exists() and LOG_FILE.stat().st_size > _MAX_LOG_SIZE:
+        backup = LOG_DIR / "app.log.1"
+        if backup.exists():
+            backup.unlink()
+        LOG_FILE.rename(backup)
+    fh = open(LOG_FILE, "a", encoding="utf-8", buffering=1)
+    sys.stdout = _LogTee(sys.__stdout__, fh)
+    sys.stderr = _LogTee(sys.__stderr__, fh)
+    print(f"[LOG] Dosya loglama aktif: {LOG_FILE}")
+
+
+_setup_file_logging()
 
 app = FastAPI(title="HacettepeBot", version="1.0.0")
 
@@ -287,6 +341,31 @@ async def ws_search(ws: WebSocket):
             await ws.close()
         except Exception:
             pass
+
+
+# ─── Log endpoint (uzaktan log okuma) ───
+@app.get("/api/logs")
+def get_logs(
+    lines: int = Query(200, ge=1, le=5000, description="Son kaç satır"),
+    filter: str = Query("", description="Filtre (örn: BOOKING, SHADOW, NOTIFY)"),
+):
+    """Son N log satırını döndür. ?filter=BOOKING ile filtrelenebilir."""
+    if not LOG_FILE.exists():
+        return PlainTextResponse("Log dosyası henüz oluşmadı.", status_code=404)
+
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as f:
+            all_lines = deque(f, maxlen=lines * 3 if filter else lines)
+
+        if filter:
+            filtered = [l for l in all_lines if filter.upper() in l.upper()]
+            result = filtered[-lines:]
+        else:
+            result = list(all_lines)[-lines:]
+
+        return PlainTextResponse("".join(result))
+    except Exception as e:
+        return PlainTextResponse(f"Log okuma hatası: {e}", status_code=500)
 
 
 # ─── Screenshot serve ───
