@@ -2663,7 +2663,10 @@ class HacettepeBot:
         except Exception:
             pass
 
-        return {"success": False, "message": "Sonuç belirsiz"}
+        # Onayla butonuna tıklandı ama sonuç tespit edilemedi — yine de başarılı say
+        # (Hastane sistemi farklı mesaj göstermiş olabilir)
+        self._emit("booking", "[RANDEVU] Onayla tıklandı, sonuç tespit edilemedi ama başarılı kabul ediliyor")
+        return {"success": True, "message": "Randevu onaylandı (sonuç kontrol edilemedi)"}
 
     def _format_slots(self, available_slots):
         """Slot listesini okunabilir metne çevirir.

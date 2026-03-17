@@ -351,8 +351,8 @@ def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, 
     }
 
     def _run():
-        import httpx
-        from backend.database import get_active_monitors, update_monitor
+        from backend.database import update_monitor
+        from backend.notifications import send_telegram_message_sync
         success = False
         msg = ""
         try:
@@ -394,17 +394,12 @@ def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, 
             except Exception as e:
                 print(f"[BOOKING] Monitor tekrar aktifleştirme hatası: {e}")
 
-        # Sonucu Telegram'a geri yolla
+        # Sonucu Telegram'a geri yolla (send_telegram_message_sync kullan —
+        # .env'den token/chat_id okur, daha güvenilir)
         if msg:
-            try:
-                resp = httpx.post(f"https://api.telegram.org/bot{token}/sendMessage", json={
-                    "chat_id": chat_id,
-                    "text": msg,
-                    "parse_mode": "HTML"
-                }, timeout=10.0)
-                print(f"[BOOKING] Telegram bildirim gönderildi: status={resp.status_code}")
-            except Exception as e:
-                print(f"[BOOKING] Telegram bildirim hatası: {e}")
+            print(f"[BOOKING] Telegram bildirimi gönderiliyor...")
+            ok = send_telegram_message_sync(msg)
+            print(f"[BOOKING] Telegram bildirim sonucu: {ok}")
 
     # Per-patient executor kullan — aynı session thread'inde sıralı çalışsın
     from backend.session_manager import SessionManager
