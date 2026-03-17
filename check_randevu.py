@@ -1992,7 +1992,7 @@ class HacettepeBot:
         try:
             appt_data = page.evaluate("""() => {
                 var data = {available_slots: [], total_visible: 0, all_slots: [], debug: []};
-                var timeRe = /(\d{1,2})[:.:](\d{2})/;
+                var timeRe = /(\\d{1,2})[:.:.](\\d{2})/;
 
                 function classifyColor(bgColor, el) {
                     var cls = (el.className || '').toLowerCase();
@@ -2002,7 +2002,7 @@ class HacettepeBot:
                     if (/blue|purple|capacity|kapasite/.test(cls)) return 'web_kapasite_dolu';
                     if (/teal|cyan|acilacak/.test(cls)) return 'açılacak';
 
-                    var m = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                    var m = bgColor.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
                     if (!m) return 'bilinmiyor';
                     var r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
                     var maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
@@ -2022,7 +2022,7 @@ class HacettepeBot:
                 var curYear = new Date().getFullYear();
 
                 function parseTrDate(text) {
-                    var m = text.trim().match(/(\d{1,2})\s+([a-zçğıöşüA-ZÇĞİÖŞÜ]+)/i);
+                    var m = text.trim().match(/(\\d{1,2})\\s+([a-zçğıöşüA-ZÇĞİÖŞÜ]+)/i);
                     if (m) {
                         var day = m[1].padStart(2,'0');
                         var mon = monthMap[m[2].substring(0,3).toLowerCase()];
@@ -2054,7 +2054,7 @@ class HacettepeBot:
                 // Tarih başlıklarını topla (pozisyon bazlı eşleştirme için)
                 var dateHeaders = [];
 
-                var dateHdrRe = /^\s*\d{1,2}\s+[A-Za-zçğıöşüÇĞİÖŞÜ]+\s*$/;
+                var dateHdrRe = /^\\s*\\d{1,2}\\s+[A-Za-zçğıöşüÇĞİÖŞÜ]+\\s*$/;
                 for (var h = 0; h < allEls.length; h++) {
                     var htxt = (allEls[h].textContent || '').trim();
                     if (dateHdrRe.test(htxt) && htxt.length < 30) {
