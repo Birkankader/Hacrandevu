@@ -200,6 +200,7 @@ async def _handle_monitor_result(monitor: dict, patient: dict, result: dict, act
             target_subtime,
             os.getenv("TELEGRAM_BOT_TOKEN", ""),
             search_text=search_text,
+            booked_monitor_id=monitor["id"],
         )
 
 
