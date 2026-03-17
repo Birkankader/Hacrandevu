@@ -299,7 +299,7 @@ async def _finalize_monitor_creation(client: httpx.AsyncClient, token: str, chat
         f"<i>Sistem 5 dakikada bir arkaplanda arama yapacaktır.</i>"
     )
 
-def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, search_text=""):
+def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, search_text="", booked_monitor_id=None):
     """Booking işlemini ana thread'i engellememek için ayrı bir Thread'de başlatır."""
     from backend.database import get_patient, get_active_monitors, update_monitor
     from backend.bot_runner import run_bot_with_session
@@ -381,7 +381,19 @@ def _trigger_booking(chat_id, p_id_str, date_str, time_str, subtime_str, token, 
             msg = f"❌ Beklenmeyen sistem hatası: {e}"
 
         if success:
-            print(f"[BOOKING] Randevu başarılı! Monitor'lar zaten kapatılmıştı.")
+            print(f"[BOOKING] Randevu başarılı! Randevu alınan monitor kapalı kalacak.")
+            # Diğer monitor'ları tekrar aktifle (farklı doktor/bölüm aramaları devam etsin)
+            try:
+                from backend.database import get_all_monitors
+                for m in get_all_monitors():
+                    if m["patient_id"] == patient_id and not m["is_active"]:
+                        if booked_monitor_id and m["id"] == booked_monitor_id:
+                            print(f"[BOOKING] Monitor #{m['id']} kapalı kalıyor (randevu alındı)")
+                            continue
+                        update_monitor(m["id"], is_active=True)
+                        print(f"[BOOKING] Monitor #{m['id']} tekrar aktifleştirildi (farklı arama)")
+            except Exception as e:
+                print(f"[BOOKING] Diğer monitor'ları aktifleştirme hatası: {e}")
         else:
             # Booking başarısız — monitor'ları tekrar aktifle
             print(f"[BOOKING] Randevu başarısız, monitor'lar tekrar aktifleştiriliyor...")
