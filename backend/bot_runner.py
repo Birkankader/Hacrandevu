@@ -135,6 +135,9 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                 exit_code = bot.run_with_page(
                     bs.page, skip_login=True, **search_args,
                 )
+                # Arama alanı bulunamadıysa session bozuk — recovery tetikle
+                if getattr(bot, '_search_field_missing', False):
+                    raise RuntimeError("Arama alanı bulunamadı — session expire")
                 # --- GC: Chromium JS heap temizliği ---
                 try:
                     bs.page.evaluate("() => { if (window.gc) window.gc(); }")

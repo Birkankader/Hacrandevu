@@ -1237,9 +1237,10 @@ class HacettepeBot:
                 pass
 
         if not search_field:
-            print("  [ARAMA] Arama alanı bulunamadı — sayfa durumu bozuk, session yenilenecek.")
+            print("  [ARAMA] Arama alanı bulunamadı.")
             self._screenshot(page, "debug-no-search-field")
-            raise RuntimeError("Arama alanı bulunamadı — session expire olmuş olabilir")
+            self._search_field_missing = True
+            return False, []
 
         print(f"  [ARAMA] Arama alanı bulundu, yazılıyor: {search_text[:30]}...")
         try:
