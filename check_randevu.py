@@ -1170,74 +1170,229 @@ class HacettepeBot:
         Returns:
             (selected: bool, alternatives: list[str])
         """
+        # Önceki aramadan kalan bayrağı sıfırla
+        self._search_field_missing = False
 
-        # ── Adım 1: "Birim veya Doktor ismi ile arama" metninin altındaki input'u bul ──
-        search_field = None
-
-        # JS ile label'e en yakın non-combo input'u bul ve data attribute ile işaretle
+        # ── Adım 0: Sayfayı aramaya hazırla ──
+        # Blocking overlay/dialog varsa kapat
         try:
-            found = page.evaluate("""() => {
-                var walker = document.createTreeWalker(
-                    document.body, NodeFilter.SHOW_TEXT, null);
-                var labelEl = null;
-                while (walker.nextNode()) {
-                    if (walker.currentNode.textContent.indexOf('Birim veya Doktor ismi ile arama') >= 0) {
-                        labelEl = walker.currentNode.parentElement;
-                        break;
-                    }
-                }
-                if (!labelEl) return false;
+            overlay = page.locator("vaadin-dialog-overlay")
+            if overlay.count() > 0 and overlay.first.is_visible():
+                print("  [ARAMA] Blocking overlay tespit edildi, kapatılıyor...")
+                page.keyboard.press("Escape")
+                time.sleep(1)
+                # Hâlâ açıksa tekrar dene
+                if overlay.count() > 0 and overlay.first.is_visible():
+                    page.keyboard.press("Escape")
+                    time.sleep(1)
+        except Exception:
+            pass
 
-                var labelRect = labelEl.getBoundingClientRect();
+        # Sayfa yüklenmesini bekle
+        try:
+            page.wait_for_load_state("networkidle", timeout=5000)
+        except Exception:
+            pass
 
-                var candidates = document.querySelectorAll('vaadin-text-field, input');
-                var best = null;
-                var bestDist = 999999;
-                for (var i = 0; i < candidates.length; i++) {
-                    var el = candidates[i];
-                    if (el.closest('vaadin-combo-box')) continue;
-                    if (el.type === 'hidden' || el.type === 'checkbox') continue;
-                    var rect = el.getBoundingClientRect();
-                    if (rect.width < 10 || rect.height < 5) continue;
-                    var dy = rect.top - labelRect.bottom;
-                    if (dy < -20) continue;
-                    var dist = Math.abs(dy) + Math.abs(rect.left - labelRect.left) * 0.5;
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        best = el;
-                    }
-                }
-                if (best) {
-                    best.setAttribute('data-hacbot-search', 'true');
-                    return true;
-                }
-                return false;
-            }""")
+        # DOM'da herhangi bir input/text-field belirmesini bekle (Vaadin render süresi)
+        try:
+            page.locator('input, vaadin-text-field').first.wait_for(
+                state="visible", timeout=8000
+            )
+        except Exception:
+            print("  [ARAMA] Sayfada input elementi bekleniyor (timeout aşıldı)...")
 
-            if found:
-                search_field = page.locator('[data-hacbot-search="true"]').first
-                if search_field.count() == 0:
-                    search_field = None
-                else:
-                    print("  [ARAMA] Arama alanı JS ile bulundu.")
-        except Exception as e:
-            print(f"  [ARAMA] JS alan arama hatası: {e}")
+        # ── Adım 1: Arama alanını bul (retry destekli) ──
+        search_field = None
+        MAX_SEARCH_FIELD_RETRIES = 4
 
-        # Fallback: label text ile parent üzerinden
-        if not search_field:
+        for _retry in range(MAX_SEARCH_FIELD_RETRIES):
+            # Önceki denemeden kalan attribute'u temizle
             try:
-                label = page.get_by_text("Birim veya Doktor ismi ile arama")
-                if label.count() > 0:
-                    parent = label.locator("..")
-                    inp = parent.locator("vaadin-text-field, input").first
-                    if inp.count() > 0 and inp.is_visible():
-                        search_field = inp
-                        print("  [ARAMA] Arama alanı fallback ile bulundu.")
+                page.evaluate("document.querySelectorAll('[data-hacbot-search]').forEach(el => el.removeAttribute('data-hacbot-search'))")
             except Exception:
                 pass
 
+            # Yöntem 1: JS ile label'e en yakın non-combo input'u bul (case-insensitive, kısmi eşleşme)
+            try:
+                found = page.evaluate("""() => {
+                    var walker = document.createTreeWalker(
+                        document.body, NodeFilter.SHOW_TEXT, null);
+                    var labelEl = null;
+                    var searchTerms = ['birim veya doktor', 'birim veya hekim',
+                                       'doktor ismi ile arama', 'hekim ismi ile arama',
+                                       'birim veya', 'arama yap'];
+                    while (walker.nextNode()) {
+                        var txt = walker.currentNode.textContent.toLowerCase().trim();
+                        for (var s = 0; s < searchTerms.length; s++) {
+                            if (txt.indexOf(searchTerms[s]) >= 0) {
+                                labelEl = walker.currentNode.parentElement;
+                                break;
+                            }
+                        }
+                        if (labelEl) break;
+                    }
+                    if (!labelEl) return false;
+
+                    var labelRect = labelEl.getBoundingClientRect();
+
+                    var candidates = document.querySelectorAll('vaadin-text-field, input');
+                    var best = null;
+                    var bestDist = 999999;
+                    for (var i = 0; i < candidates.length; i++) {
+                        var el = candidates[i];
+                        if (el.closest('vaadin-combo-box')) continue;
+                        if (el.type === 'hidden' || el.type === 'checkbox') continue;
+                        var rect = el.getBoundingClientRect();
+                        if (rect.width < 10 || rect.height < 5) continue;
+                        var dy = rect.top - labelRect.bottom;
+                        if (dy < -20) continue;
+                        var dist = Math.abs(dy) + Math.abs(rect.left - labelRect.left) * 0.5;
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            best = el;
+                        }
+                    }
+                    if (best) {
+                        best.setAttribute('data-hacbot-search', 'true');
+                        return true;
+                    }
+                    return false;
+                }""")
+
+                if found:
+                    search_field = page.locator('[data-hacbot-search="true"]').first
+                    if search_field.count() == 0:
+                        search_field = None
+                    else:
+                        print("  [ARAMA] Arama alanı JS-label ile bulundu.")
+            except Exception as e:
+                print(f"  [ARAMA] JS label arama hatası: {e}")
+
+            # Yöntem 2: Playwright get_by_text ile (birden fazla metin dene)
+            if not search_field:
+                for label_text in [
+                    "Birim veya Doktor ismi ile arama",
+                    "Birim veya Hekim ismi ile arama",
+                    re.compile(r"birim\s+veya\s+(doktor|hekim)", re.I),
+                    re.compile(r"arama\s+yap", re.I),
+                ]:
+                    try:
+                        label = page.get_by_text(label_text)
+                        if label.count() > 0:
+                            parent = label.locator("..")
+                            inp = parent.locator("vaadin-text-field, input").first
+                            if inp.count() > 0 and inp.is_visible():
+                                search_field = inp
+                                print(f"  [ARAMA] Arama alanı label-fallback ile bulundu.")
+                                break
+                    except Exception:
+                        pass
+
+            # Yöntem 3: Label'den bağımsız — combo-box olmayan görünür text field bul
+            if not search_field:
+                try:
+                    found = page.evaluate("""() => {
+                        // Önceki işaretleri temizle
+                        document.querySelectorAll('[data-hacbot-search]').forEach(
+                            el => el.removeAttribute('data-hacbot-search'));
+
+                        var fields = document.querySelectorAll(
+                            'vaadin-text-field, input[type="text"], input[type="search"], input:not([type])');
+                        var best = null;
+                        var bestScore = -1;
+                        for (var i = 0; i < fields.length; i++) {
+                            var el = fields[i];
+                            if (el.closest('vaadin-combo-box')) continue;
+                            if (el.closest('vaadin-dialog-overlay')) continue;
+                            if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'password') continue;
+                            var rect = el.getBoundingClientRect();
+                            if (rect.width < 50 || rect.height < 5) continue;
+                            if (rect.top < 0 || rect.left < 0) continue;
+                            var style = window.getComputedStyle(el);
+                            if (style.display === 'none' || style.visibility === 'hidden') continue;
+
+                            var score = 0;
+                            var ph = (el.placeholder || el.getAttribute('placeholder') || '').toLowerCase();
+                            var lbl = (el.getAttribute('label') || el.getAttribute('aria-label') || '').toLowerCase();
+                            var allText = ph + ' ' + lbl;
+                            if (allText.indexOf('ara') >= 0 || allText.indexOf('search') >= 0) score += 50;
+                            if (allText.indexOf('birim') >= 0 || allText.indexOf('doktor') >= 0 ||
+                                allText.indexOf('hekim') >= 0) score += 30;
+                            // Sayfanın üst kısmındaki alanlar daha olası
+                            score += Math.max(0, 100 - rect.top / 5);
+                            // Geniş alanlar daha olası
+                            score += Math.min(rect.width / 10, 20);
+                            if (score > bestScore) {
+                                bestScore = score;
+                                best = el;
+                            }
+                        }
+                        if (best && bestScore > 20) {
+                            best.setAttribute('data-hacbot-search', 'true');
+                            return {found: true, score: bestScore,
+                                    tag: best.tagName, placeholder: best.placeholder || ''};
+                        }
+                        return {found: false};
+                    }""")
+                    if found and found.get("found"):
+                        search_field = page.locator('[data-hacbot-search="true"]').first
+                        if search_field.count() == 0:
+                            search_field = None
+                        else:
+                            print(f"  [ARAMA] Arama alanı akıllı-fallback ile bulundu "
+                                  f"(skor={found.get('score')}, tag={found.get('tag')}, "
+                                  f"placeholder={found.get('placeholder', '')!r}).")
+                except Exception as e:
+                    print(f"  [ARAMA] Akıllı-fallback hatası: {e}")
+
+            if search_field:
+                break
+
+            # Bulunamadı — bekle ve tekrar dene
+            if _retry < MAX_SEARCH_FIELD_RETRIES - 1:
+                print(f"  [ARAMA] Arama alanı bulunamadı, {_retry+1}/{MAX_SEARCH_FIELD_RETRIES} — beklenip tekrar denenecek...")
+                # Debug: sayfada ne var görelim
+                try:
+                    page_info = page.evaluate("""() => {
+                        var bodyText = (document.body ? document.body.innerText : '').substring(0, 500);
+                        var inputs = document.querySelectorAll('input, vaadin-text-field');
+                        var inputInfo = [];
+                        for (var i = 0; i < Math.min(inputs.length, 10); i++) {
+                            var el = inputs[i];
+                            inputInfo.push({
+                                tag: el.tagName,
+                                type: el.type || '',
+                                placeholder: el.placeholder || el.getAttribute('placeholder') || '',
+                                label: el.getAttribute('label') || el.getAttribute('aria-label') || '',
+                                visible: el.getBoundingClientRect().width > 0,
+                                inCombo: !!el.closest('vaadin-combo-box')
+                            });
+                        }
+                        return {bodySnippet: bodyText, inputs: inputInfo, url: location.href};
+                    }""")
+                    print(f"  [ARAMA-DEBUG] URL: {page_info.get('url', '?')[:100]}")
+                    print(f"  [ARAMA-DEBUG] Sayfa metni (ilk 300): {page_info.get('bodySnippet', '')[:300]}")
+                    for ii, inp in enumerate(page_info.get("inputs", [])):
+                        print(f"  [ARAMA-DEBUG] Input #{ii}: {inp}")
+                except Exception as dbg_e:
+                    print(f"  [ARAMA-DEBUG] Debug bilgisi alınamadı: {dbg_e}")
+                self._screenshot(page, f"debug-no-search-field-retry-{_retry}")
+
+                # 2. denemede: arama sayfası URL'ine geri dön (sayfa yanlış state'te olabilir)
+                if _retry == 1 and hasattr(self, 'post_login_url') and self.post_login_url:
+                    try:
+                        print(f"  [ARAMA] Arama sayfasına geri dönülüyor: {self.post_login_url[:60]}...")
+                        page.goto(self.post_login_url, wait_until="networkidle", timeout=15000)
+                        time.sleep(2)
+                    except Exception as nav_e:
+                        print(f"  [ARAMA] Sayfa navigasyonu hatası: {nav_e}")
+                        time.sleep(3)
+                else:
+                    time.sleep(3)
+
         if not search_field:
-            print("  [ARAMA] Arama alanı bulunamadı.")
+            print("  [ARAMA] Arama alanı bulunamadı (tüm yöntemler ve denemeler tükendi).")
             self._screenshot(page, "debug-no-search-field")
             self._search_field_missing = True
             return False, []

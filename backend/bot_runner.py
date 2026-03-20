@@ -135,9 +135,29 @@ def run_bot_with_session(config: dict, status_callback=None, cancel_event=None,
                 exit_code = bot.run_with_page(
                     bs.page, skip_login=True, **search_args,
                 )
-                # Arama alanı bulunamadıysa session bozuk — recovery tetikle
+                # Arama alanı bulunamadıysa — önce sayfa yenileyerek dene
                 if getattr(bot, '_search_field_missing', False):
-                    raise RuntimeError("Arama alanı bulunamadı — session expire")
+                    if bs.search_url:
+                        print("[SESSION] Arama alanı bulunamadı — arama sayfasına geri dönülüyor...")
+                        if status_callback:
+                            status_callback("init", "[BILGI] Arama alanı bulunamadı, sayfa yenileniyor...")
+                        try:
+                            bs.page.goto(bs.search_url, wait_until="networkidle", timeout=15000)
+                            time.sleep(2)
+                            bot._search_field_missing = False
+                            exit_code = bot.run_with_page(
+                                bs.page, skip_login=True, **search_args,
+                            )
+                            if getattr(bot, '_search_field_missing', False):
+                                raise RuntimeError("Arama alanı bulunamadı — session expire")
+                        except BotCancelled:
+                            raise
+                        except RuntimeError:
+                            raise
+                        except Exception as retry_e:
+                            raise RuntimeError(f"Arama alanı bulunamadı — session expire: {retry_e}")
+                    else:
+                        raise RuntimeError("Arama alanı bulunamadı — session expire")
                 # --- GC: Chromium JS heap temizliği ---
                 try:
                     bs.page.evaluate("() => { if (window.gc) window.gc(); }")
