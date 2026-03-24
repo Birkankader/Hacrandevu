@@ -1341,6 +1341,8 @@ class HacettepeBot:
                         pass
 
             # Yöntem 3: Label'den bağımsız — combo-box olmayan görünür text field bul
+            # Strateji: Bağımsız (combo-box dışı) vaadin-text-field'ı bul.
+            # Login sonrası arama sayfasında genellikle tek böyle alan vardır.
             if not search_field:
                 try:
                     found = page.evaluate("""() => {
@@ -1348,43 +1350,105 @@ class HacettepeBot:
                         document.querySelectorAll('[data-hacbot-search]').forEach(
                             el => el.removeAttribute('data-hacbot-search'));
 
+                        // Strateji 3a: Bağımsız vaadin-text-field (combo-box dışı)
+                        // Bu en güvenilir yöntem — arama alanı her zaman bağımsız bir text field
+                        var independentFields = [];
+                        var vaadinFields = document.querySelectorAll('vaadin-text-field');
+                        for (var vi = 0; vi < vaadinFields.length; vi++) {
+                            var vf = vaadinFields[vi];
+                            // Combo-box içindeki alanları atla
+                            if (vf.closest('vaadin-combo-box')) continue;
+                            // Dialog overlay içindeki alanları atla
+                            if (vf.closest('vaadin-dialog-overlay')) continue;
+                            // Görünür olmalı
+                            var rect = vf.getBoundingClientRect();
+                            if (rect.width < 50 || rect.height < 5) continue;
+                            var style = window.getComputedStyle(vf);
+                            if (style.display === 'none' || style.visibility === 'hidden') continue;
+                            // Mevcut değeri boş olmalı (TC alanı dolu olacak)
+                            var inp = vf.querySelector('input');
+                            var val = inp ? (inp.value || '').trim() : '';
+                            
+                            var score = 0;
+                            var ph = (vf.getAttribute('placeholder') || '').toLowerCase();
+                            var lbl = (vf.getAttribute('label') || '').toLowerCase();
+                            var allText = ph + ' ' + lbl;
+                            
+                            // Arama terimleri yüksek skor
+                            if (allText.indexOf('ara') >= 0 || allText.indexOf('search') >= 0) score += 100;
+                            if (allText.indexOf('birim') >= 0 || allText.indexOf('doktor') >= 0 ||
+                                allText.indexOf('hekim') >= 0) score += 80;
+                            // Boş alan = daha muhtemelen arama alanı
+                            if (!val) score += 50;
+                            // TC no dolu alan = login alanı, atla
+                            if (val.length >= 10) score -= 200;
+                            // Sayfanın üst kısmındaki alanlar
+                            score += Math.max(0, 100 - rect.top / 5);
+                            // Geniş alanlar daha olası
+                            score += Math.min(rect.width / 10, 20);
+                            
+                            independentFields.push({el: vf, score: score, val: val,
+                                label: lbl, placeholder: ph, y: rect.top});
+                        }
+                        
+                        // En yüksek skora sahip alanı seç
+                        if (independentFields.length > 0) {
+                            independentFields.sort(function(a, b) { return b.score - a.score; });
+                            var best = independentFields[0];
+                            // Skor en az 0 olmalı (negatif = TC alanı gibi dolu alan)
+                            if (best.score >= 0) {
+                                best.el.setAttribute('data-hacbot-search', 'true');
+                                return {found: true, score: best.score,
+                                        tag: 'VAADIN-TEXT-FIELD',
+                                        placeholder: best.placeholder,
+                                        label: best.label,
+                                        value: best.val,
+                                        totalCandidates: independentFields.length,
+                                        method: 'independent-vtf'};
+                            }
+                        }
+
+                        // Strateji 3b (eski fallback): Herhangi bir non-combo input
                         var fields = document.querySelectorAll(
                             'vaadin-text-field, input[type="text"], input[type="search"], input:not([type])');
-                        var best = null;
-                        var bestScore = -1;
+                        var best2 = null;
+                        var bestScore2 = -1;
                         for (var i = 0; i < fields.length; i++) {
                             var el = fields[i];
                             if (el.closest('vaadin-combo-box')) continue;
                             if (el.closest('vaadin-dialog-overlay')) continue;
                             if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'password') continue;
-                            var rect = el.getBoundingClientRect();
-                            if (rect.width < 50 || rect.height < 5) continue;
-                            if (rect.top < 0 || rect.left < 0) continue;
-                            var style = window.getComputedStyle(el);
-                            if (style.display === 'none' || style.visibility === 'hidden') continue;
+                            var rect2 = el.getBoundingClientRect();
+                            if (rect2.width < 50 || rect2.height < 5) continue;
+                            if (rect2.top < 0 || rect2.left < 0) continue;
+                            var style2 = window.getComputedStyle(el);
+                            if (style2.display === 'none' || style2.visibility === 'hidden') continue;
 
-                            var score = 0;
-                            var ph = (el.placeholder || el.getAttribute('placeholder') || '').toLowerCase();
-                            var lbl = (el.getAttribute('label') || el.getAttribute('aria-label') || '').toLowerCase();
-                            var allText = ph + ' ' + lbl;
-                            if (allText.indexOf('ara') >= 0 || allText.indexOf('search') >= 0) score += 50;
-                            if (allText.indexOf('birim') >= 0 || allText.indexOf('doktor') >= 0 ||
-                                allText.indexOf('hekim') >= 0) score += 30;
-                            // Sayfanın üst kısmındaki alanlar daha olası
-                            score += Math.max(0, 100 - rect.top / 5);
-                            // Geniş alanlar daha olası
-                            score += Math.min(rect.width / 10, 20);
-                            if (score > bestScore) {
-                                bestScore = score;
-                                best = el;
+                            var score2 = 0;
+                            var ph2 = (el.placeholder || el.getAttribute('placeholder') || '').toLowerCase();
+                            var lbl2 = (el.getAttribute('label') || el.getAttribute('aria-label') || '').toLowerCase();
+                            var allText2 = ph2 + ' ' + lbl2;
+                            if (allText2.indexOf('ara') >= 0 || allText2.indexOf('search') >= 0) score2 += 50;
+                            if (allText2.indexOf('birim') >= 0 || allText2.indexOf('doktor') >= 0 ||
+                                allText2.indexOf('hekim') >= 0) score2 += 30;
+                            // Boş alan tercih et
+                            var elVal = (el.value || '').trim();
+                            if (!elVal) score2 += 30;
+                            if (elVal.length >= 10) score2 -= 100;
+                            score2 += Math.max(0, 100 - rect2.top / 5);
+                            score2 += Math.min(rect2.width / 10, 20);
+                            if (score2 > bestScore2) {
+                                bestScore2 = score2;
+                                best2 = el;
                             }
                         }
-                        if (best && bestScore > 20) {
-                            best.setAttribute('data-hacbot-search', 'true');
-                            return {found: true, score: bestScore,
-                                    tag: best.tagName, placeholder: best.placeholder || ''};
+                        if (best2 && bestScore2 > 20) {
+                            best2.setAttribute('data-hacbot-search', 'true');
+                            return {found: true, score: bestScore2,
+                                    tag: best2.tagName, placeholder: best2.placeholder || '',
+                                    method: 'generic-fallback'};
                         }
-                        return {found: false};
+                        return {found: false, method: 'none'};
                     }""")
                     if found and found.get("found"):
                         search_field = page.locator('[data-hacbot-search="true"]').first
@@ -1392,8 +1456,10 @@ class HacettepeBot:
                             search_field = None
                         else:
                             print(f"  [ARAMA] Arama alanı akıllı-fallback ile bulundu "
-                                  f"(skor={found.get('score')}, tag={found.get('tag')}, "
-                                  f"placeholder={found.get('placeholder', '')!r}).")
+                                  f"(yöntem={found.get('method')}, skor={found.get('score')}, "
+                                  f"tag={found.get('tag')}, label={found.get('label', '')!r}, "
+                                  f"placeholder={found.get('placeholder', '')!r}, "
+                                  f"value={found.get('value', '')!r}).")
                 except Exception as e:
                     print(f"  [ARAMA] Akıllı-fallback hatası: {e}")
 
