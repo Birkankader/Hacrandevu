@@ -1214,25 +1214,76 @@ class HacettepeBot:
                 pass
 
             # Yöntem 1: JS ile label'e en yakın non-combo input'u bul (case-insensitive, kısmi eşleşme)
+            # Yöntem 1a: Vaadin text-field'ların label attribute'unu doğrudan kontrol et
             try:
                 found = page.evaluate("""() => {
-                    var walker = document.createTreeWalker(
-                        document.body, NodeFilter.SHOW_TEXT, null);
-                    var labelEl = null;
                     var searchTerms = ['birim veya doktor', 'birim veya hekim',
                                        'doktor ismi ile arama', 'hekim ismi ile arama',
                                        'birim veya', 'arama yap'];
-                    while (walker.nextNode()) {
-                        var txt = walker.currentNode.textContent.toLowerCase().trim();
+
+                    // ── Strateji A: vaadin-text-field[label] attribute kontrolü ──
+                    var vaadinFields = document.querySelectorAll('vaadin-text-field');
+                    for (var vi = 0; vi < vaadinFields.length; vi++) {
+                        var vf = vaadinFields[vi];
+                        if (vf.closest('vaadin-combo-box')) continue;
+                        if (vf.closest('vaadin-dialog-overlay')) continue;
+                        var vfLabel = (vf.getAttribute('label') || '').toLowerCase();
+                        var vfPlaceholder = (vf.getAttribute('placeholder') || '').toLowerCase();
+                        var vfText = vfLabel + ' ' + vfPlaceholder;
+                        for (var st = 0; st < searchTerms.length; st++) {
+                            if (vfText.indexOf(searchTerms[st]) >= 0) {
+                                vf.setAttribute('data-hacbot-search', 'true');
+                                return {found: true, method: 'vaadin-label-attr', label: vfLabel};
+                            }
+                        }
+                    }
+
+                    // ── Strateji B: Shadow DOM dahil innerText taraması ──
+                    var allEls = document.querySelectorAll('label, span, div, p, vaadin-text-field');
+                    var labelEl = null;
+                    for (var ai = 0; ai < allEls.length; ai++) {
+                        var el = allEls[ai];
+                        var txt = '';
+                        // Shadow root varsa onun innerText'ini de kontrol et
+                        if (el.shadowRoot) {
+                            txt = (el.shadowRoot.textContent || '').toLowerCase().trim();
+                        }
+                        if (!txt) {
+                            txt = (el.innerText || el.textContent || '').toLowerCase().trim();
+                        }
+                        if (txt.length > 200) continue; // Çok uzun metin — container, atla
                         for (var s = 0; s < searchTerms.length; s++) {
                             if (txt.indexOf(searchTerms[s]) >= 0) {
-                                labelEl = walker.currentNode.parentElement;
+                                labelEl = el;
                                 break;
                             }
                         }
                         if (labelEl) break;
                     }
-                    if (!labelEl) return false;
+
+                    // ── Strateji C (orijinal): TreeWalker text node taraması ──
+                    if (!labelEl) {
+                        var walker = document.createTreeWalker(
+                            document.body, NodeFilter.SHOW_TEXT, null);
+                        while (walker.nextNode()) {
+                            var wtxt = walker.currentNode.textContent.toLowerCase().trim();
+                            for (var s2 = 0; s2 < searchTerms.length; s2++) {
+                                if (wtxt.indexOf(searchTerms[s2]) >= 0) {
+                                    labelEl = walker.currentNode.parentElement;
+                                    break;
+                                }
+                            }
+                            if (labelEl) break;
+                        }
+                    }
+
+                    if (!labelEl) return {found: false, method: 'none'};
+
+                    // Label elementinin kendisi vaadin-text-field ise direkt onu seç
+                    if (labelEl.tagName === 'VAADIN-TEXT-FIELD' && !labelEl.closest('vaadin-combo-box')) {
+                        labelEl.setAttribute('data-hacbot-search', 'true');
+                        return {found: true, method: 'label-is-field'};
+                    }
 
                     var labelRect = labelEl.getBoundingClientRect();
 
@@ -1240,32 +1291,32 @@ class HacettepeBot:
                     var best = null;
                     var bestDist = 999999;
                     for (var i = 0; i < candidates.length; i++) {
-                        var el = candidates[i];
-                        if (el.closest('vaadin-combo-box')) continue;
-                        if (el.type === 'hidden' || el.type === 'checkbox') continue;
-                        var rect = el.getBoundingClientRect();
+                        var el2 = candidates[i];
+                        if (el2.closest('vaadin-combo-box')) continue;
+                        if (el2.type === 'hidden' || el2.type === 'checkbox') continue;
+                        var rect = el2.getBoundingClientRect();
                         if (rect.width < 10 || rect.height < 5) continue;
                         var dy = rect.top - labelRect.bottom;
                         if (dy < -20) continue;
                         var dist = Math.abs(dy) + Math.abs(rect.left - labelRect.left) * 0.5;
                         if (dist < bestDist) {
                             bestDist = dist;
-                            best = el;
+                            best = el2;
                         }
                     }
                     if (best) {
                         best.setAttribute('data-hacbot-search', 'true');
-                        return true;
+                        return {found: true, method: 'label-proximity'};
                     }
-                    return false;
+                    return {found: false, method: 'label-found-no-field'};
                 }""")
 
-                if found:
+                if found and found.get("found"):
                     search_field = page.locator('[data-hacbot-search="true"]').first
                     if search_field.count() == 0:
                         search_field = None
                     else:
-                        print("  [ARAMA] Arama alanı JS-label ile bulundu.")
+                        print(f"  [ARAMA] Arama alanı JS-label ile bulundu (yöntem: {found.get('method', '?')}).")
             except Exception as e:
                 print(f"  [ARAMA] JS label arama hatası: {e}")
 
@@ -1471,6 +1522,10 @@ class HacettepeBot:
                     human_delay(1500, 3000)
 
                 self._screenshot(page, "debug-dialog-search")
+            else:
+                print("  [ARAMA] Dialog açılmadı — sayfa içi sonuç aranacak.")
+                # Dialog açılmadıysa Vaadin sunucu yanıtını bekle
+                human_delay(2000, 4000)
         except Exception:
             pass
 
@@ -1484,6 +1539,7 @@ class HacettepeBot:
             'vaadin-grid vaadin-grid-cell-content',
             '[role="row"]',
             '[role="option"]',
+            '[role="listitem"]',
             'tr',
             'vaadin-item',
             'vaadin-combo-box-item',
@@ -1502,6 +1558,9 @@ class HacettepeBot:
 
         search_lower = search_text.lower().strip()
 
+        # Debug: sayfadaki tüm metinleri logla (eşleşme bulunamazsa sorunu anlamak için)
+        all_candidate_texts = []
+
         # Önce tüm eşleşen alternatifleri topla (tıklamadan)
         for container in containers:
             if alternatives:
@@ -1516,6 +1575,9 @@ class HacettepeBot:
                             txt = (item.text_content() or "").strip()
                             if not txt or len(txt) < 3:
                                 continue
+                            # Debug için aday metinleri topla (max 20)
+                            if len(all_candidate_texts) < 20 and txt not in all_candidate_texts:
+                                all_candidate_texts.append(txt[:80])
                             txt_lower = txt.lower().strip()
                             if txt_lower.startswith(search_lower) or \
                                search_lower == txt_lower or \
@@ -1529,8 +1591,77 @@ class HacettepeBot:
                 except Exception:
                     continue
 
+        # Alternatif bulunamadıysa combo-box overlay'den de dene
+        if not alternatives:
+            try:
+                combo_items = page.locator('vaadin-combo-box-overlay [role="option"], vaadin-combo-box-item').all()
+                for item in combo_items:
+                    try:
+                        txt = (item.text_content() or "").strip()
+                        if not txt or len(txt) < 3:
+                            continue
+                        txt_lower = txt.lower().strip()
+                        if search_lower in txt_lower:
+                            alternatives.append(txt)
+                            if first_item is None:
+                                first_item = item
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
         if alternatives:
             print(f"  [ARAMA] {len(alternatives)} alternatif bulundu: {[a[:40] for a in alternatives]}")
+        else:
+            # Debug loglama: ne bulundu?
+            print(f"  [ARAMA-DEBUG] Dialog açıldı mı: {dialog_found}")
+            print(f"  [ARAMA-DEBUG] Aday metinler ({len(all_candidate_texts)}): {all_candidate_texts[:10]}")
+            self._screenshot(page, "debug-no-match")
+
+            # ── Fallback: JS ile tüm DOM'da search_text içeren tıklanabilir elementleri bul ──
+            try:
+                js_results = page.evaluate("""(searchText) => {
+                    var searchLower = searchText.toLowerCase().trim();
+                    var results = [];
+                    var all = document.querySelectorAll('*');
+                    for (var i = 0; i < all.length; i++) {
+                        var el = all[i];
+                        var txt = (el.textContent || '').trim();
+                        if (txt.length < 3 || txt.length > 200) continue;
+                        if (txt.toLowerCase().indexOf(searchLower) < 0) continue;
+                        // Sadece "yaprak" veya tıklanabilir elementleri al
+                        var tag = el.tagName.toLowerCase();
+                        var isLeaf = el.children.length === 0 ||
+                                     ['td', 'th', 'span', 'a', 'button', 'vaadin-button',
+                                      'vaadin-grid-cell-content', 'vaadin-item', 'li'].indexOf(tag) >= 0;
+                        if (!isLeaf) continue;
+                        var rect = el.getBoundingClientRect();
+                        if (rect.width < 5 || rect.height < 5) continue;
+                        results.push({text: txt.substring(0, 120), tag: tag,
+                                      x: Math.round(rect.x), y: Math.round(rect.y)});
+                        if (results.length >= 15) break;
+                    }
+                    return results;
+                }""", search_text)
+                if js_results:
+                    print(f"  [ARAMA-FALLBACK] JS ile {len(js_results)} eşleşen element bulundu:")
+                    for jr in js_results[:5]:
+                        print(f"    - <{jr['tag']}> ({jr['x']},{jr['y']}): {jr['text'][:60]}")
+                    # İlk bulunan elemente tıkla
+                    best = js_results[0]
+                    try:
+                        el = page.locator(f"{best['tag']}").filter(has_text=re.compile(re.escape(search_text[:15]), re.I)).first
+                        if el.count() > 0:
+                            txt_full = (el.text_content() or "").strip()
+                            alternatives.append(txt_full)
+                            first_item = el
+                            print(f"  [ARAMA-FALLBACK] Element bulundu: {txt_full[:60]}")
+                    except Exception as fe:
+                        print(f"  [ARAMA-FALLBACK] Element tıklama hazırlığı hatası: {fe}")
+                else:
+                    print(f"  [ARAMA-FALLBACK] JS ile de eşleşen bulunamadı.")
+            except Exception as e:
+                print(f"  [ARAMA-FALLBACK] JS fallback hatası: {e}")
 
         # İlk eşleşeni tıkla
         if first_item is not None:
