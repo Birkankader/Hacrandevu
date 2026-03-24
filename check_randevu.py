@@ -853,10 +853,10 @@ def _wait_for_manual_solve(page, timeout_s) -> bool:
 
 
 def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=None, cancel_event=None) -> bool:
-    """reCAPTCHA çözme stratejisi (auto-solve öncelikli):
+    """reCAPTCHA çözme stratejisi (2captcha öncelikli):
 
-    1. Auto-solve dene (checkbox tıklama — en güvenilir yöntem)
-    2. Auto-solve başarısızsa VE CAPTCHA_API_KEY varsa → 2captcha dene
+    1. CAPTCHA_API_KEY varsa → 2captcha HEMEN dene (zaman kaybetme)
+    2. 2captcha başarısızsa → auto-solve denemeleri
     3. Hâlâ çözülemediyse ve headless değilse → manuel çözüm (son çare)
     """
     human_delay(500, 1000)
@@ -869,9 +869,33 @@ def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=No
     print("[BILGI] reCAPTCHA algılandı.")
 
     # ══════════════════════════════════════════════════════════
-    #  Adım 1: Auto-solve (BİRİNCİL YÖNTEM — checkbox tıklama)
+    #  Adım 1: 2captcha (BİRİNCİL YÖNTEM)
     # ══════════════════════════════════════════════════════════
-    print("[BILGI] Auto-solve denemeleri başlıyor (birincil yöntem)...")
+    if api_key:
+        print("[BILGI] CAPTCHA_API_KEY mevcut — 2captcha birincil yöntem olarak deneniyor...")
+
+        # Kısa bir insan davranışı simüle et (tamamen hareketsiz sayfa şüpheli)
+        try:
+            simulate_human(page, extensive=False)
+        except Exception:
+            pass
+        human_delay(500, 1500)
+
+        # 2captcha ile çöz (dahili olarak 2 token denemesi yapar)
+        if _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=cancel_event):
+            print("[BILGI] reCAPTCHA 2captcha ile çözüldü!")
+            return True
+        else:
+            print("[UYARI] 2captcha başarısız oldu. Alternatif yöntemler deneniyor...")
+            _dismiss_challenge(page)
+            human_delay(1000, 2000)
+    else:
+        print("[BILGI] CAPTCHA_API_KEY tanımlı değil — otomatik/manuel yöntemler kullanılacak.")
+
+    # ══════════════════════════════════════════════════════════
+    #  Adım 2: Auto-solve denemeleri (yedek yöntem)
+    # ══════════════════════════════════════════════════════════
+    print("[BILGI] Auto-solve denemeleri başlıyor...")
     for attempt in range(1, max_retries + 1):
         if cancel_event and cancel_event.is_set():
             raise BotCancelled("Arama iptal edildi.")
@@ -883,7 +907,7 @@ def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=No
             simulate_human(page, extensive=True)
         except Exception:
             print(f"  [Deneme {attempt}] Tarayıcı yanıt vermiyor.")
-            break
+            return False
         human_delay(1000, 2000)
 
         if _try_auto_solve(page, attempt):
@@ -893,29 +917,6 @@ def handle_recaptcha(page, timeout_ms, headless, max_retries, captcha_api_key=No
                 return True
 
         print(f"  [Deneme {attempt}/{max_retries}] Auto-solve başarısız.")
-
-    # ══════════════════════════════════════════════════════════
-    #  Adım 2: 2captcha (YEDEK YÖNTEM)
-    # ══════════════════════════════════════════════════════════
-    if api_key:
-        print("[BILGI] Auto-solve başarısız — 2captcha yedek yöntem olarak deneniyor...")
-        _dismiss_challenge(page)
-        human_delay(1000, 2000)
-
-        # Kısa bir insan davranışı simüle et
-        try:
-            simulate_human(page, extensive=False)
-        except Exception:
-            pass
-        human_delay(500, 1500)
-
-        if _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=cancel_event):
-            print("[BILGI] reCAPTCHA 2captcha ile çözüldü!")
-            return True
-        else:
-            print("[UYARI] 2captcha da başarısız oldu.")
-            _dismiss_challenge(page)
-            human_delay(1000, 2000)
 
     # ══════════════════════════════════════════════════════════
     #  Adım 3: Manuel çözüm (SON ÇARE — sadece headless değilse)
@@ -3479,30 +3480,46 @@ class HacettepeBot:
 
         self._screenshot(page, "debug-after-recaptcha")
 
-        # Callback login'i zaten tetiklemiş olabilir — kısa bekle ve kontrol et
-        time.sleep(2)
-        if not _recaptcha_present(page):
-            print("[BILGI] reCAPTCHA kayboldu — callback giriş işlemini tamamlamış olabilir.")
-            # Sayfa zaten arama sayfasına geçmiş mi?
+        # Callback login'i zaten tetiklemiş olabilir — bekle ve kontrol et
+        # 2captcha $server.callback Vaadin'de otomatik login yapabilir
+        print("[BILGI] Callback sonrası sayfa geçişi kontrol ediliyor...")
+        for _cb_wait in range(8):  # max 16 saniye
+            self._check_cancelled()
+            time.sleep(2)
             try:
-                current_url = page.url
-                if "public/main" not in current_url.lower() or "user=PUBLIC" not in current_url:
-                    print(f"[BILGI] Sayfa değişti — login callback ile tamamlandı: {current_url[:80]}")
+                # TC Kimlik alanı kaybolmuş mu? (en güvenilir login tespiti)
+                tc_field = page.locator(
+                    'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i], '
+                    'vaadin-text-field[placeholder*="T.C." i]'
+                )
+                if tc_field.count() == 0:
+                    print(f"[BILGI] TC alanı kayboldu — callback login'i tamamladı ({(_cb_wait+1)*2}s)!")
+                    # Bilgi dialogu varsa işle
+                    handle_info_dialog(page, cfg["phone"], cfg["email"])
                     return True
-            except Exception:
-                pass
-            # Dialog açılmış mı?
-            try:
+
+                # Dialog açılmış mı? (bilgi tamamlama)
                 dialog = page.locator("vaadin-dialog-overlay")
-                if dialog.count() > 0:
-                    print("[BILGI] Dialog bulundu — login callback ile tamamlandı!")
+                if dialog.count() > 0 and dialog.first.is_visible():
+                    dialog_text = (dialog.first.text_content() or "").lower()
+                    if "giriş" not in dialog_text:  # Giriş dialogu değilse
+                        print("[BILGI] Dialog bulundu — callback login'i tamamladı!")
+                        handle_info_dialog(page, cfg["phone"], cfg["email"])
+                        return True
+
+                # "Güvenli Çıkış" veya "Randevularım" veya "Birim veya" metni var mı?
+                body_txt = page.evaluate(
+                    "() => (document.body ? document.body.innerText || '' : '').substring(0, 500)"
+                ).lower()
+                if "güvenli çıkış" in body_txt or "randevularım" in body_txt or "birim veya" in body_txt:
+                    print(f"[BILGI] Post-login metin bulundu — callback login'i tamamladı ({(_cb_wait+1)*2}s)!")
                     handle_info_dialog(page, cfg["phone"], cfg["email"])
                     return True
             except Exception:
                 pass
 
-        # Token expire olmasın diye hızlı devam et
-        time.sleep(random.uniform(0.5, 1.0))
+        # Callback login'i tamamlamadı — Giriş butonuna basmayı dene
+        print("[BILGI] Callback otomatik geçiş yapmadı — Giriş butonuyla devam ediliyor...")
 
         # Giriş'ten önce grecaptcha.getResponse override'ı tazele
         try:
