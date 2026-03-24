@@ -1,0 +1,127 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: 
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Online Appointment Login
+                - generic:
+                  - radiogroup:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Identity Number" [checked]
+                              - generic:
+                                - generic: Identity Number
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Passport No"
+                              - generic:
+                                - generic: Passport No
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Turkish Identity Number
+                      - generic:
+                        - generic:
+                          - generic:
+                            - textbox "Turkish Identity Number": "12345678901"
+                        - generic: 
+                  - generic:
+                    - generic:
+                      - generic: "Your Birth Year:"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Year
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Year": "2024"
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                              - text:            
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Month
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Month": January
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                              - text:            
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Day
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Day": "1"
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                              - text:            
+                  - iframe [ref=e47]:
+                    - generic [ref=f1e2]:
+                      - generic [ref=f1e3]:
+                        - checkbox "Ben robot değilim" [ref=f1e7]
+                        - generic [ref=f1e11]: Ben robot değilim
+                        - generic [ref=f1e13]:
+                          - text: Bu site
+                          - link "ücretsiz reCAPTCHA Kuruluş kotasını" [ref=f1e14] [cursor=pointer]:
+                            - /url: https://cloud.google.com/recaptcha/docs/billing-information
+                          - text: aşıyor.
+                      - generic [ref=f1e15]:
+                        - generic [ref=f1e18]: reCAPTCHA
+                        - generic [ref=f1e19]:
+                          - link "Gizlilik" [ref=f1e20] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/privacy/
+                          - text: "-"
+                          - link "Şartlar" [ref=f1e21] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/terms/
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: 
+                          - generic:
+                            - checkbox [checked]
+                      - generic:
+                        - generic:
+                          - generic: GPDR text
+                      - generic: read
+                  - generic:
+                    - button "Login":
+                      - generic:
+                        - generic:
+                          - generic: Login
+                - generic: Nucleus Online Appointment Version:3832 - Vaadin 23
+  - generic:
+    - generic:
+      - generic: Online
+  - dialog [active]:
+    - generic [ref=e203]:
+      - generic:
+        - generic [ref=e204]: Hata
+        - generic [ref=e205]: 1.280.13 - The format of the patients ID number is incorrect.
+        - button "TAMAM" [ref=e206]:
+          - generic [ref=e208]:
+            - generic: TAMAM

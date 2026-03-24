@@ -1,0 +1,164 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: 
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Online Appointment Login
+                - generic:
+                  - radiogroup:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Identity Number" [checked]
+                              - generic:
+                                - generic: Identity Number
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Passport No"
+                              - generic:
+                                - generic: Passport No
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Turkish Identity Number
+                      - generic:
+                        - generic:
+                          - generic:
+                            - textbox "Turkish Identity Number": "12345678901"
+                        - generic: 
+                  - generic:
+                    - generic:
+                      - generic: "Your Birth Year:"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic [ref=e38]:
+                              - generic [ref=e39]:
+                                - generic: Year
+                              - generic [ref=e40]:
+                                - combobox "Year" [expanded] [active] [ref=e41]
+                                - generic:
+                                  - text: 
+                                  - generic [ref=e42]: 
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Month
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Month" [disabled]
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Day
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Day" [disabled]
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                  - iframe [ref=e47]:
+                    - generic [ref=f1e2]:
+                      - generic [ref=f1e3]:
+                        - checkbox "Ben robot değilim" [ref=f1e7]
+                        - generic [ref=f1e11]: Ben robot değilim
+                        - generic [ref=f1e13]:
+                          - text: Bu site
+                          - link "ücretsiz reCAPTCHA Kuruluş kotasını" [ref=f1e14] [cursor=pointer]:
+                            - /url: https://cloud.google.com/recaptcha/docs/billing-information
+                          - text: aşıyor.
+                      - generic [ref=f1e15]:
+                        - generic [ref=f1e18]: reCAPTCHA
+                        - generic [ref=f1e19]:
+                          - link "Gizlilik" [ref=f1e20] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/privacy/
+                          - text: "-"
+                          - link "Şartlar" [ref=f1e21] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/terms/
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: 
+                          - generic:
+                            - checkbox [checked]
+                      - generic:
+                        - generic:
+                          - generic: GPDR text
+                      - generic: read
+                  - generic:
+                    - button "Login":
+                      - generic:
+                        - generic:
+                          - generic: Login
+                - generic: Nucleus Online Appointment Version:3832 - Vaadin 23
+  - generic:
+    - generic:
+      - generic: Online
+  - listbox [ref=e67]:
+    - generic [ref=e68]:
+      - generic:
+        - option "2026" [ref=e69]:
+          - generic [ref=e70]: 
+          - generic [ref=e71]:
+            - generic: "2026"
+        - option "2025" [ref=e72]:
+          - generic [ref=e73]: 
+          - generic [ref=e74]:
+            - generic: "2025"
+        - option "2024" [ref=e75]:
+          - generic [ref=e76]: 
+          - generic [ref=e77]:
+            - generic: "2024"
+        - option "2023" [ref=e78]:
+          - generic [ref=e79]: 
+          - generic [ref=e80]:
+            - generic: "2023"
+        - option "2022" [ref=e81]:
+          - generic [ref=e82]: 
+          - generic [ref=e83]:
+            - generic: "2022"
+        - option "2021" [ref=e84]:
+          - generic [ref=e85]: 
+          - generic [ref=e86]:
+            - generic: "2021"
+        - option "2020" [ref=e87]:
+          - generic [ref=e88]: 
+          - generic [ref=e89]:
+            - generic: "2020"
+        - option "2019" [ref=e90]:
+          - generic [ref=e91]: 
+          - generic [ref=e92]:
+            - generic: "2019"
+        - option "2018" [ref=e93]:
+          - generic [ref=e94]: 
+          - generic [ref=e95]:
+            - generic: "2018"
+        - option "2017" [ref=e96]:
+          - generic [ref=e97]: 
+          - generic [ref=e98]:
+            - generic: "2017"
+        - option "2016" [ref=e99]:
+          - generic [ref=e100]: 
+          - generic [ref=e101]:
+            - generic: "2016"
+        - option "2015" [ref=e102]:
+          - generic [ref=e103]: 
+          - generic [ref=e104]:
+            - generic: "2015"

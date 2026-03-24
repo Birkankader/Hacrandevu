@@ -1,0 +1,1762 @@
+[2026-03-20 23:15:36] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/logs/app.log
+[2026-03-20 23:15:36] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-20 23:15:36] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-20 23:15:54] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/logs/app.log
+[2026-03-20 23:15:54] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-20 23:15:54] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-20 23:15:54] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-20 23:15:54] [TELEGRAM] Poller durduruldu.
+[2026-03-20 23:16:00] Traceback (most recent call last):
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/backend/bot_runner.py", line 195, in run_bot_with_session
+    bs = sm.create_session(patient_tc, config)
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/backend/session_manager.py", line 134, in create_session
+    session.start()
+    ~~~~~~~~~~~~~^^
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/scrapling/engines/_browsers/_stealth.py", line 98, in start
+    self.context = self.playwright.chromium.launch_persistent_context(**persistent_options)
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/sync_api/_generated.py", line 14570, in launch_persistent_context
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.launch_persistent_context(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<51 lines>...
+        )
+        ^
+    )
+    ^
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_sync_base.py", line 97, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_browser_type.py", line 152, in launch_persistent_context
+    result = await self._channel.send_return_as_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        "launchPersistentContext", TimeoutSettings.launch_timeout, params
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_connection.py", line 67, in send_return_as_dict
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+[2026-03-20 23:16:00]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_connection.py", line 505, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+[2026-03-20 23:16:00] patchright._impl._errors.TargetClosedError: BrowserType.launch_persistent_context: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Users/birkankader/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --no-default-browser-check --disable-dev-shm-usage --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --disable-hang-monitor --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-blink-features=AutomationControlled --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-print-preview --disable-session-crashed-bubble --no-service-autorun --no-first-run --start-maximized --disable-background-timer-throttling --disable-domain-reliability --accept-lang=en-US --force-webrtc-ip-handling-policy --prerender-from-omnibox=disabled --enable-web-bluetooth --disable-threaded-scrolling --enable-surface-synchronization --no-default-browser-check --font-render-hinting=none --disable-logging --homepage=about:blank --force-color-profile=srgb --disable-infobars --hide-scrollbars --run-all-compositor-stages-before-draw --password-store=basic --enable-tcp-fast-open --disable-offer-upload-credit-cards --disable-search-engine-choice-screen --disable-backgrounding-occluded-windows --disable-features=AudioServiceOutOfProcess,TranslateUI,BlinkGenPropertyTrees --disable-ipc-flooding-protection --autoplay-policy=user-gesture-required --disable-hang-monitor --disable-background-networking --metrics-recording-only --disable-translate --disable-gesture-typing --disable-new-content-rendering-timeout --mute-audio --disable-breakpad --disable-offer-store-unmasked-wallet-cards --webrtc-ip-handling-policy=disable_non_proxied_udp --fingerprinting-canvas-image-data-noise --disable-voice-input --test-type --disable-partial-raster --enable-simple-cache-backend --enable-features=NetworkService,NetworkServiceInProcess,TrustTokens,TrustTokensAlwaysAllowIssuance --disable-wake-on-wifi --disable-cloud-import --aggressive-cache-discard --lang=en-US --ignore-gpu-blocklist --disable-prompt-on-repost --disable-image-animation-resync --disable-layer-tree-host-memory-pressure --disable-crash-reporter --no-pings --disable-client-side-phishing-detection --disable-cookie-encryption --disable-component-extensions-with-background-pages --disable-checker-imaging --disable-dev-shm-usage --use-mock-keychain --disable-renderer-backgrounding --disable-threaded-animation --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --disable-sync --window-position=0,0 --safebrowsing-disable-auto-update --disable-blink-features=AutomationControlled --enable-async-dns --user-data-dir=/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.chrome-profile/15034089976 --remote-debugging-pipe about:blank
+<launched> pid=12540
+Call log:
+  - <launching> /Users/birkankader/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --no-default-browser-check --disable-dev-shm-usage --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --disable-hang-monitor --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-blink-features=AutomationControlled --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-print-preview --disable-session-crashed-bubble --no-service-autorun --no-first-run --start-maximized --disable-background-timer-throttling --disable-domain-reliability --accept-lang=en-US --force-webrtc-ip-handling-policy --prerender-from-omnibox=disabled --enable-web-bluetooth --disable-threaded-scrolling --enable-surface-synchronization --no-default-browser-check --font-render-hinting=none --disable-logging --homepage=about:blank --force-color-profile=srgb --disable-infobars --hide-scrollbars --run-all-compositor-stages-before-draw --password-store=basic --enable-tcp-fast-open --disable-offer-upload-credit-cards --disable-search-engine-choice-screen --disable-backgrounding-occluded-windows --disable-features=AudioServiceOutOfProcess,TranslateUI,BlinkGenPropertyTrees --disable-ipc-flooding-protection --autoplay-policy=user-gesture-required --disable-hang-monitor --disable-background-networking --metrics-recording-only --disable-translate --disable-gesture-typing --disable-new-content-rendering-timeout --mute-audio --disable-breakpad --disable-offer-store-unmasked-wallet-cards --webrtc-ip-handling-policy=disable_non_proxied_udp --fingerprinting-canvas-image-data-noise --disable-voice-input --test-type --disable-partial-raster --enable-simple-cache-backend --enable-features=NetworkService,NetworkServiceInProcess,TrustTokens,TrustTokensAlwaysAllowIssuance --disable-wake-on-wifi --disable-cloud-import --aggressive-cache-discard --lang=en-US --ignore-gpu-blocklist --disable-prompt-on-repost --disable-image-animation-resync --disable-layer-tree-host-memory-pressure --disable-crash-reporter --no-pings --disable-client-side-phishing-detection --disable-cookie-encryption --disable-component-extensions-with-background-pages --disable-checker-imaging --disable-dev-shm-usage --use-mock-keychain --disable-renderer-backgrounding --disable-threaded-animation --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --disable-sync --window-position=0,0 --safebrowsing-disable-auto-update --disable-blink-features=AutomationControlled --enable-async-dns --user-data-dir=/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.chrome-profile/15034089976 --remote-debugging-pipe about:blank
+  - <launched> pid=12540
+  - [pid=12540] <gracefully close start>
+  - [pid=12540] <kill>
+  - [pid=12540] <will force kill>
+  - [pid=12540] exception while trying to kill process: Error: kill EPERM
+  - [pid=12540] <process did exit: exitCode=null, signal=SIGTRAP>
+  - [pid=12540] starting temporary directories cleanup
+  - [pid=12540] finished temporary directories cleanup
+  - [pid=12540] <gracefully close end>
+
+[2026-03-20 23:16:26] Traceback (most recent call last):
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/backend/bot_runner.py", line 195, in run_bot_with_session
+    bs = sm.create_session(patient_tc, config)
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/backend/session_manager.py", line 134, in create_session
+    session.start()
+    ~~~~~~~~~~~~~^^
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/scrapling/engines/_browsers/_stealth.py", line 98, in start
+    self.context = self.playwright.chromium.launch_persistent_context(**persistent_options)
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/sync_api/_generated.py", line 14570, in launch_persistent_context
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.launch_persistent_context(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<51 lines>...
+        )
+        ^
+    )
+    ^
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_sync_base.py", line 97, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_browser_type.py", line 152, in launch_persistent_context
+    result = await self._channel.send_return_as_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        "launchPersistentContext", TimeoutSettings.launch_timeout, params
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_connection.py", line 67, in send_return_as_dict
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+[2026-03-20 23:16:26]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_connection.py", line 505, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+[2026-03-20 23:16:26] patchright._impl._errors.TargetClosedError: BrowserType.launch_persistent_context: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Users/birkankader/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --no-default-browser-check --disable-dev-shm-usage --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --disable-hang-monitor --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-blink-features=AutomationControlled --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-print-preview --disable-session-crashed-bubble --no-service-autorun --no-first-run --start-maximized --disable-background-timer-throttling --disable-domain-reliability --accept-lang=en-US --force-webrtc-ip-handling-policy --prerender-from-omnibox=disabled --enable-web-bluetooth --disable-threaded-scrolling --enable-surface-synchronization --no-default-browser-check --font-render-hinting=none --disable-logging --homepage=about:blank --force-color-profile=srgb --disable-infobars --hide-scrollbars --run-all-compositor-stages-before-draw --password-store=basic --enable-tcp-fast-open --disable-offer-upload-credit-cards --disable-search-engine-choice-screen --disable-backgrounding-occluded-windows --disable-features=AudioServiceOutOfProcess,TranslateUI,BlinkGenPropertyTrees --disable-ipc-flooding-protection --autoplay-policy=user-gesture-required --disable-hang-monitor --disable-background-networking --metrics-recording-only --disable-translate --disable-gesture-typing --disable-new-content-rendering-timeout --mute-audio --disable-breakpad --disable-offer-store-unmasked-wallet-cards --webrtc-ip-handling-policy=disable_non_proxied_udp --fingerprinting-canvas-image-data-noise --disable-voice-input --test-type --disable-partial-raster --enable-simple-cache-backend --enable-features=NetworkService,NetworkServiceInProcess,TrustTokens,TrustTokensAlwaysAllowIssuance --disable-wake-on-wifi --disable-cloud-import --aggressive-cache-discard --lang=en-US --ignore-gpu-blocklist --disable-prompt-on-repost --disable-image-animation-resync --disable-layer-tree-host-memory-pressure --disable-crash-reporter --no-pings --disable-client-side-phishing-detection --disable-cookie-encryption --disable-component-extensions-with-background-pages --disable-checker-imaging --disable-dev-shm-usage --use-mock-keychain --disable-renderer-backgrounding --disable-threaded-animation --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --disable-sync --window-position=0,0 --safebrowsing-disable-auto-update --disable-blink-features=AutomationControlled --enable-async-dns --user-data-dir=/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.chrome-profile/15034089976 --remote-debugging-pipe about:blank
+<launched> pid=12572
+[pid=12572][err] [12584:263843:0320/231626.866327:ERROR:base/memory/shared_memory_switch.cc:273] Mach rendezvous failed, terminating process (parent died?)
+[pid=12572][err] [12585:263844:0320/231626.866331:ERROR:base/memory/shared_memory_switch.cc:273] Mach rendezvous failed, terminating process (parent died?)
+Call log:
+  - <launching> /Users/birkankader/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --no-default-browser-check --disable-dev-shm-usage --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --disable-hang-monitor --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-blink-features=AutomationControlled --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-print-preview --disable-session-crashed-bubble --no-service-autorun --no-first-run --start-maximized --disable-background-timer-throttling --disable-domain-reliability --accept-lang=en-US --force-webrtc-ip-handling-policy --prerender-from-omnibox=disabled --enable-web-bluetooth --disable-threaded-scrolling --enable-surface-synchronization --no-default-browser-check --font-render-hinting=none --disable-logging --homepage=about:blank --force-color-profile=srgb --disable-infobars --hide-scrollbars --run-all-compositor-stages-before-draw --password-store=basic --enable-tcp-fast-open --disable-offer-upload-credit-cards --disable-search-engine-choice-screen --disable-backgrounding-occluded-windows --disable-features=AudioServiceOutOfProcess,TranslateUI,BlinkGenPropertyTrees --disable-ipc-flooding-protection --autoplay-policy=user-gesture-required --disable-hang-monitor --disable-background-networking --metrics-recording-only --disable-translate --disable-gesture-typing --disable-new-content-rendering-timeout --mute-audio --disable-breakpad --disable-offer-store-unmasked-wallet-cards --webrtc-ip-handling-policy=disable_non_proxied_udp --fingerprinting-canvas-image-data-noise --disable-voice-input --test-type --disable-partial-raster --enable-simple-cache-backend --enable-features=NetworkService,NetworkServiceInProcess,TrustTokens,TrustTokensAlwaysAllowIssuance --disable-wake-on-wifi --disable-cloud-import --aggressive-cache-discard --lang=en-US --ignore-gpu-blocklist --disable-prompt-on-repost --disable-image-animation-resync --disable-layer-tree-host-memory-pressure --disable-crash-reporter --no-pings --disable-client-side-phishing-detection --disable-cookie-encryption --disable-component-extensions-with-background-pages --disable-checker-imaging --disable-dev-shm-usage --use-mock-keychain --disable-renderer-backgrounding --disable-threaded-animation --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --disable-sync --window-position=0,0 --safebrowsing-disable-auto-update --disable-blink-features=AutomationControlled --enable-async-dns --user-data-dir=/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.chrome-profile/15034089976 --remote-debugging-pipe about:blank
+  - <launched> pid=12572
+  - [pid=12572][err] [12584:263843:0320/231626.866327:ERROR:base/memory/shared_memory_switch.cc:273] Mach rendezvous failed, terminating process (parent died?)
+  - [pid=12572][err] [12585:263844:0320/231626.866331:ERROR:base/memory/shared_memory_switch.cc:273] Mach rendezvous failed, terminating process (parent died?)
+  - [pid=12572] <gracefully close start>
+  - [pid=12572] <kill>
+  - [pid=12572] <will force kill>
+  - [pid=12572] exception while trying to kill process: Error: kill EPERM
+  - [pid=12572] <process did exit: exitCode=null, signal=SIGTRAP>
+  - [pid=12572] starting temporary directories cleanup
+  - [pid=12572] finished temporary directories cleanup
+  - [pid=12572] <gracefully close end>
+
+[2026-03-20 23:17:36] [SHADOW] İzleme başlatılıyor: Şifa Birkan Kader -> Anestezi
+[2026-03-20 23:17:37] Traceback (most recent call last):
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/backend/bot_runner.py", line 195, in run_bot_with_session
+    bs = sm.create_session(patient_tc, config)
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/backend/session_manager.py", line 134, in create_session
+    session.start()
+    ~~~~~~~~~~~~~^^
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/scrapling/engines/_browsers/_stealth.py", line 98, in start
+    self.context = self.playwright.chromium.launch_persistent_context(**persistent_options)
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/sync_api/_generated.py", line 14570, in launch_persistent_context
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.launch_persistent_context(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<51 lines>...
+        )
+        ^
+    )
+    ^
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_sync_base.py", line 97, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_browser_type.py", line 152, in launch_persistent_context
+    result = await self._channel.send_return_as_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        "launchPersistentContext", TimeoutSettings.launch_timeout, params
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_connection.py", line 67, in send_return_as_dict
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+[2026-03-20 23:17:37]   File "/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.venv/lib/python3.14/site-packages/patchright/_impl/_connection.py", line 505, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+[2026-03-20 23:17:37] patchright._impl._errors.TargetClosedError: BrowserType.launch_persistent_context: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Users/birkankader/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --no-default-browser-check --disable-dev-shm-usage --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --disable-hang-monitor --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-blink-features=AutomationControlled --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-print-preview --disable-session-crashed-bubble --no-service-autorun --no-first-run --start-maximized --disable-background-timer-throttling --disable-domain-reliability --accept-lang=en-US --force-webrtc-ip-handling-policy --prerender-from-omnibox=disabled --enable-web-bluetooth --disable-threaded-scrolling --enable-surface-synchronization --no-default-browser-check --font-render-hinting=none --disable-logging --homepage=about:blank --force-color-profile=srgb --disable-infobars --hide-scrollbars --run-all-compositor-stages-before-draw --password-store=basic --enable-tcp-fast-open --disable-offer-upload-credit-cards --disable-search-engine-choice-screen --disable-backgrounding-occluded-windows --disable-features=AudioServiceOutOfProcess,TranslateUI,BlinkGenPropertyTrees --disable-ipc-flooding-protection --autoplay-policy=user-gesture-required --disable-hang-monitor --disable-background-networking --metrics-recording-only --disable-translate --disable-gesture-typing --disable-new-content-rendering-timeout --mute-audio --disable-breakpad --disable-offer-store-unmasked-wallet-cards --webrtc-ip-handling-policy=disable_non_proxied_udp --fingerprinting-canvas-image-data-noise --disable-voice-input --test-type --disable-partial-raster --enable-simple-cache-backend --enable-features=NetworkService,NetworkServiceInProcess,TrustTokens,TrustTokensAlwaysAllowIssuance --disable-wake-on-wifi --disable-cloud-import --aggressive-cache-discard --lang=en-US --ignore-gpu-blocklist --disable-prompt-on-repost --disable-image-animation-resync --disable-layer-tree-host-memory-pressure --disable-crash-reporter --no-pings --disable-client-side-phishing-detection --disable-cookie-encryption --disable-component-extensions-with-background-pages --disable-checker-imaging --disable-dev-shm-usage --use-mock-keychain --disable-renderer-backgrounding --disable-threaded-animation --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --disable-sync --window-position=0,0 --safebrowsing-disable-auto-update --disable-blink-features=AutomationControlled --enable-async-dns --user-data-dir=/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.chrome-profile/15034089976 --remote-debugging-pipe about:blank
+<launched> pid=12611
+Call log:
+  - <launching> /Users/birkankader/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --no-default-browser-check --disable-dev-shm-usage --disable-features=AcceptCHFrame,AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument --enable-features=CDPScreenshotNewSurface --disable-hang-monitor --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-blink-features=AutomationControlled --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --disable-print-preview --disable-session-crashed-bubble --no-service-autorun --no-first-run --start-maximized --disable-background-timer-throttling --disable-domain-reliability --accept-lang=en-US --force-webrtc-ip-handling-policy --prerender-from-omnibox=disabled --enable-web-bluetooth --disable-threaded-scrolling --enable-surface-synchronization --no-default-browser-check --font-render-hinting=none --disable-logging --homepage=about:blank --force-color-profile=srgb --disable-infobars --hide-scrollbars --run-all-compositor-stages-before-draw --password-store=basic --enable-tcp-fast-open --disable-offer-upload-credit-cards --disable-search-engine-choice-screen --disable-backgrounding-occluded-windows --disable-features=AudioServiceOutOfProcess,TranslateUI,BlinkGenPropertyTrees --disable-ipc-flooding-protection --autoplay-policy=user-gesture-required --disable-hang-monitor --disable-background-networking --metrics-recording-only --disable-translate --disable-gesture-typing --disable-new-content-rendering-timeout --mute-audio --disable-breakpad --disable-offer-store-unmasked-wallet-cards --webrtc-ip-handling-policy=disable_non_proxied_udp --fingerprinting-canvas-image-data-noise --disable-voice-input --test-type --disable-partial-raster --enable-simple-cache-backend --enable-features=NetworkService,NetworkServiceInProcess,TrustTokens,TrustTokensAlwaysAllowIssuance --disable-wake-on-wifi --disable-cloud-import --aggressive-cache-discard --lang=en-US --ignore-gpu-blocklist --disable-prompt-on-repost --disable-image-animation-resync --disable-layer-tree-host-memory-pressure --disable-crash-reporter --no-pings --disable-client-side-phishing-detection --disable-cookie-encryption --disable-component-extensions-with-background-pages --disable-checker-imaging --disable-dev-shm-usage --use-mock-keychain --disable-renderer-backgrounding --disable-threaded-animation --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --disable-sync --window-position=0,0 --safebrowsing-disable-auto-update --disable-blink-features=AutomationControlled --enable-async-dns --user-data-dir=/Users/birkankader/Documents/Projects/projectIdeas/HacettepeBot-Denemesi/.chrome-profile/15034089976 --remote-debugging-pipe about:blank
+  - <launched> pid=12611
+  - [pid=12611] <gracefully close start>
+  - [pid=12611] <kill>
+  - [pid=12611] <will force kill>
+  - [pid=12611] exception while trying to kill process: Error: kill EPERM
+  - [pid=12611] <process did exit: exitCode=null, signal=SIGTRAP>
+  - [pid=12611] starting temporary directories cleanup
+  - [pid=12611] finished temporary directories cleanup
+  - [pid=12611] <gracefully close end>
+
+[2026-03-20 23:17:37] [SHADOW] İzleme sonucu: ERROR - Toplam uygun: None
+[2026-03-20 23:20:13] [BILGI] 2Captcha API anahtarı mevcut. Google güven adımı atlanıyor (hızlı yol).
+[2026-03-20 23:20:24] [BILGI] TC Kimlik No dolduruluyor...
+[2026-03-20 23:20:30] [BILGI] Doğum tarihi dolduruluyor...
+[2026-03-20 23:20:37] [BILGI] Form alanları dolduruldu.
+[2026-03-20 23:20:42] [BILGI] reCAPTCHA işleniyor...
+[2026-03-20 23:20:42] [BILGI] reCAPTCHA algılandı.
+[2026-03-20 23:20:42] [BILGI] CAPTCHA_API_KEY mevcut — 2captcha birincil yöntem olarak deneniyor...
+[2026-03-20 23:20:46]   [2captcha] === Token deneme 1/2 ===
+[2026-03-20 23:20:46]   [2captcha] Sitekey iframe src'den alındı: 6Lcf758UAAAA...
+[2026-03-20 23:20:46]   [2captcha] Sitekey: 6Lcf758UAAAAAAT_... | URL: https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-
+[2026-03-20 23:20:46]   [2captcha] Çözüm isteniyor... (genellikle 20-60 saniye)
+[2026-03-20 23:23:36] [SHADOW] İzleme başlatılıyor: Şifa Birkan Kader -> Anestezi
+[2026-03-20 23:24:10]   [2captcha] Token alındı (2318 karakter).
+[2026-03-20 23:24:10]   [2captcha] Token enjekte ediliyor...
+[2026-03-20 23:24:10]   [2captcha] Token enjekte edildi ve callback tetiklendi: $server.callback (MY-RECAPTCHA)
+[2026-03-20 23:24:10]   [2captcha] Kısa doğrulama bekleniyor (0.5 saniye)...
+[2026-03-20 23:24:10]   [2captcha] Callback başarıyla çağrıldı, form gönderimi ile devam ediliyor.
+[2026-03-20 23:24:10] [BILGI] reCAPTCHA 2captcha ile çözüldü!
+[2026-03-20 23:24:13] [BILGI] Form gönderiliyor...
+[2026-03-20 23:24:13] [BILGI] Giriş butonu tıklandı: True
+[2026-03-20 23:24:20] [BILGI] Bilgi tamamlama dialogu bulundu — login başarılı!
+[2026-03-20 23:24:20] [BILGI] Bilgi tamamlama dialogu kontrol ediliyor...
+[2026-03-20 23:24:20] [BILGI] Vaadin dialog overlay bulundu!
+[2026-03-20 23:24:21] [BILGI] Telefon dolduruldu: 544***
+[2026-03-20 23:24:22] [BILGI] Onayla tıklandı!
+[2026-03-20 23:24:23] [BILGI] Dialog kapandı.
+[2026-03-20 23:24:25] [BILGI] Arama yapılıyor: Anestezi
+[2026-03-20 23:24:33]   [ARAMA] Sayfada input elementi bekleniyor (timeout aşıldı)...
+[2026-03-20 23:24:33]   [ARAMA] Arama alanı JS-label ile bulundu.
+[2026-03-20 23:24:33]   [ARAMA] Arama alanı bulundu, yazılıyor: Anestezi...
+[2026-03-20 23:24:36]   [ARAMA] Enter ile arama tetiklendi.
+[2026-03-20 23:24:39]   [ARAMA] Dialog/modal açıldı.
+[2026-03-20 23:24:39]   [ARAMA] Dialog içi arama alanı bulundu, yazılıyor...
+[2026-03-20 23:24:45]   [ARAMA] 2 alternatif bulundu: ['Ek Bina Anestezi Poliklinik Odası 1 - Ha', 'Ek Bina Anestezi Poliklinik Odası 2 - Ha']
+[2026-03-20 23:24:45]   [ARAMA] İlk alternatif seçiliyor: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi
+[2026-03-20 23:24:46]   [ARAMA] Sonuç seçildi!
+[2026-03-20 23:24:48] [BILGI] Arama: başarılı
+[2026-03-20 23:24:51] [BILGI] Randevu tipi seçiliyor: internetten randevu
+[2026-03-20 23:24:51]   [TYPE-COMBO] Randevu tipi combo bulundu (index 6, değer: '')
+[2026-03-20 23:24:52]   [TYPE-COMBO] Scoped seçenekler: ['İnternet Sonuç', 'İnternetten Randevu']
+[2026-03-20 23:25:01] [BILGI] Randevu tipi seçildi: İnternetten Randevu
+[2026-03-20 23:25:04]   [GRID-WAIT] Deneme 1: time=False, grid=False, table=False
+[2026-03-20 23:25:06]   [GRID-WAIT] Deneme 2: time=True, grid=False, table=False
+[2026-03-20 23:25:07] [BILGI] Randevular analiz ediliyor...
+[2026-03-20 23:25:07]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-20 23:25:07]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-20 23:25:07]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-20 23:25:07]   [APPOINTMENTS] Toplam: 32, Müsait: 17, Dağılım: {'web_kapasite_dolu': 15, 'açık': 17}
+[2026-03-20 23:25:08] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-20 23:25:11] [BILGI] Hafta 2 taranıyor...
+[2026-03-20 23:25:11]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-20 23:25:11]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-20 23:25:11]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-20 23:25:11]   [APPOINTMENTS] Toplam: 32, Müsait: 17, Dağılım: {'web_kapasite_dolu': 15, 'açık': 17}
+[2026-03-20 23:25:11] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-20 23:25:14] [BILGI] Hafta 3 taranıyor...
+[2026-03-20 23:25:14]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-20 23:25:14]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-20 23:25:14]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-20 23:25:14]   [APPOINTMENTS] Toplam: 32, Müsait: 24, Dağılım: {'açık': 24, 'web_kapasite_dolu': 8}
+[2026-03-20 23:25:14] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-20 23:25:17] [BILGI] Hafta 4 taranıyor...
+[2026-03-20 23:25:17]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-20 23:25:17]   [APPOINTMENTS-JS] dateHeaders: 3 found
+[2026-03-20 23:25:17]   [APPOINTMENTS-JS] total_visible: 24
+[2026-03-20 23:25:17]   [APPOINTMENTS] Toplam: 24, Müsait: 17, Dağılım: {'açık': 17, 'web_kapasite_dolu': 7}
+[2026-03-20 23:25:28] [UYARI] 'Sonra' butonu bulunamadı.
+[2026-03-20 23:25:28] [BILGI] Toplam 4 hafta tarandı (daha fazla hafta yok).
+[2026-03-20 23:25:28] [BILGI] MÜSAİT: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi — 23.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 24.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 25.03.2026: 15:00, 14:00, 13:00, 11:00, 10:00, 15:00, 14:00, 13:00, 11:00, 10:00 | 26.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 27.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 30.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 31.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 01.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 | 02.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00
+[2026-03-20 23:25:28] [BILGI] Taranıyor: Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi
+[2026-03-20 23:25:28]   [UNIT-COMBO] 3 aday combo bulundu, doğrulanıyor...
+[2026-03-20 23:25:29] [NOTIFY] Telegram mesajı gönderildi: 🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>
+
+🏥 <b>Bölüm:</b> ...
+[2026-03-20 23:25:29]   [UNIT-COMBO] Birim/doktor combo doğrulandı (index 5, 2 seçenek, örnek: ['Ek Bina Anestezi Poliklin', 'Ek Bina Anestezi Poliklin'])
+[2026-03-20 23:25:39] [BILGI] 2Captcha API anahtarı mevcut. Google güven adımı atlanıyor (hızlı yol).
+[2026-03-20 23:25:50] [BILGI] TC Kimlik No dolduruluyor...
+[2026-03-20 23:25:58] [BILGI] Doğum tarihi dolduruluyor...
+[2026-03-20 23:26:05] [BILGI] Form alanları dolduruldu.
+[2026-03-20 23:26:10] [BILGI] reCAPTCHA işleniyor...
+[2026-03-20 23:26:11] [BILGI] reCAPTCHA algılandı.
+[2026-03-20 23:26:11] [BILGI] CAPTCHA_API_KEY mevcut — 2captcha birincil yöntem olarak deneniyor...
+[2026-03-20 23:26:14]   [2captcha] === Token deneme 1/2 ===
+[2026-03-20 23:26:14]   [2captcha] Sitekey iframe src'den alındı: 6Lcf758UAAAA...
+[2026-03-20 23:26:14]   [2captcha] Sitekey: 6Lcf758UAAAAAAT_... | URL: https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-
+[2026-03-20 23:26:14]   [2captcha] Çözüm isteniyor... (genellikle 20-60 saniye)
+[2026-03-20 23:26:57] [SHADOW] İptal sinyali gönderiliyor (Monitor ID: 22)...
+[2026-03-20 23:27:58] [SHADOW] İzleme sonucu: CANCELLED - Toplam uygun: None
+[2026-03-23 06:44:49] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 06:44:54] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 06:44:59] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:02:13] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:02:18] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:02:23] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:02:28] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:02:33] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:18:12] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:18:17] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:35:32] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:35:37] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:43:52] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 07:43:58] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:01:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:01:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:17:03] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:17:09] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:33:43] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:33:48] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:44:53] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 08:44:58] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:01:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:01:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:16:43] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:16:48] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:34:29] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:34:34] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:45:54] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 09:45:59] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 10:02:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 10:02:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 10:18:32] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 10:18:37] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 10:20:22] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-23 10:20:27] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 10:03:54] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:03:54] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:03:54] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:04:18] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:04:18] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:04:18] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:04:18] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:04:25] [BILGI] 2Captcha API anahtarı mevcut. Google güven adımı atlanıyor (hızlı yol).
+[2026-03-24 10:04:36] [BILGI] TC Kimlik No dolduruluyor...
+[2026-03-24 10:04:43] [BILGI] Doğum tarihi dolduruluyor...
+[2026-03-24 10:04:51] [BILGI] Form alanları dolduruldu.
+[2026-03-24 10:04:56] [BILGI] reCAPTCHA işleniyor...
+[2026-03-24 10:04:57] [BILGI] reCAPTCHA algılandı.
+[2026-03-24 10:04:57] [BILGI] CAPTCHA_API_KEY mevcut — 2captcha birincil yöntem olarak deneniyor...
+[2026-03-24 10:05:01]   [2captcha] === Token deneme 1/2 ===
+[2026-03-24 10:05:02]   [2captcha] Sitekey iframe src'den alındı: 6Lcf758UAAAA...
+[2026-03-24 10:05:02]   [2captcha] Sitekey: 6Lcf758UAAAAAAT_... | URL: https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-
+[2026-03-24 10:05:02]   [2captcha] Çözüm isteniyor... (genellikle 20-60 saniye)
+[2026-03-24 10:05:42]   [2captcha] Token alındı (2190 karakter).
+[2026-03-24 10:05:42]   [2captcha] Token enjekte ediliyor...
+[2026-03-24 10:05:42]   [2captcha] Token enjekte edildi ve callback tetiklendi: $server.callback (MY-RECAPTCHA)
+[2026-03-24 10:05:42]   [2captcha] Kısa doğrulama bekleniyor (0.5 saniye)...
+[2026-03-24 10:05:43]   [2captcha] Callback başarıyla çağrıldı, form gönderimi ile devam ediliyor.
+[2026-03-24 10:05:43] [BILGI] reCAPTCHA 2captcha ile çözüldü!
+[2026-03-24 10:05:46] [BILGI] Form gönderiliyor...
+[2026-03-24 10:05:46] [BILGI] Giriş butonu tıklandı: True
+[2026-03-24 10:05:52] [BILGI] Bilgi tamamlama dialogu bulundu — login başarılı!
+[2026-03-24 10:05:52] [BILGI] Bilgi tamamlama dialogu kontrol ediliyor...
+[2026-03-24 10:05:52] [BILGI] Vaadin dialog overlay bulundu!
+[2026-03-24 10:05:53] [BILGI] Telefon dolduruldu: 544***
+[2026-03-24 10:05:54] [BILGI] Onayla tıklandı!
+[2026-03-24 10:05:55] [BILGI] Dialog kapandı.
+[2026-03-24 10:05:57] [BILGI] Arama yapılıyor: Anestezi
+[2026-03-24 10:06:05]   [ARAMA] Sayfada input elementi bekleniyor (timeout aşıldı)...
+[2026-03-24 10:06:05]   [ARAMA] Arama alanı JS-label ile bulundu.
+[2026-03-24 10:06:05]   [ARAMA] Arama alanı bulundu, yazılıyor: Anestezi...
+[2026-03-24 10:06:09]   [ARAMA] Enter ile arama tetiklendi.
+[2026-03-24 10:06:13]   [ARAMA] Dialog/modal açıldı.
+[2026-03-24 10:06:13]   [ARAMA] Dialog içi arama alanı bulundu, yazılıyor...
+[2026-03-24 10:06:19]   [ARAMA] 4 alternatif bulundu: ['Ek Bina Anestezi Poliklinik Odası 1 - Ha', 'Ek Bina Anestezi Poliklinik Odası 2 - Ha', 'Ek Bina Anestezi Poliklinik Odası 1 - Ha', 'Ek Bina Anestezi Poliklinik Odası 2 - Ha']
+[2026-03-24 10:06:19]   [ARAMA] İlk alternatif seçiliyor: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi
+[2026-03-24 10:06:19]   [ARAMA] Sonuç seçildi!
+[2026-03-24 10:06:22] [BILGI] Arama: başarılı
+[2026-03-24 10:06:26] [BILGI] Randevu tipi seçiliyor: internet randevu
+[2026-03-24 10:06:26]   [TYPE-COMBO] Randevu tipi combo bulundu (index 6, değer: '')
+[2026-03-24 10:06:29]   [TYPE-COMBO] Scoped seçenekler: ['1994', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014', '2013', '2012', '2011', '2010', '2009', 'Mayıs', 'Mayıs', 'Temmuz', 'Ekim', 'Kasım', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık', '30', '13', '23', '30', '31', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', 'İnternet Sonuç', 'İnternetten Randevu']
+[2026-03-24 10:06:39] [BILGI] Randevu tipi seçildi: İnternetten Randevu
+[2026-03-24 10:06:42]   [GRID-WAIT] Deneme 1: time=False, grid=False, table=False
+[2026-03-24 10:06:44]   [GRID-WAIT] Deneme 2: time=True, grid=False, table=False
+[2026-03-24 10:06:45] [BILGI] Randevular analiz ediliyor...
+[2026-03-24 10:06:45]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:06:45]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:06:45]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:06:45]   [APPOINTMENTS] Toplam: 32, Müsait: 18, Dağılım: {'açık': 18, 'dolu': 3, 'web_kapasite_dolu': 11}
+[2026-03-24 10:06:45] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-24 10:06:48] [BILGI] Hafta 2 taranıyor...
+[2026-03-24 10:06:48]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:06:48]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:06:48]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:06:48]   [APPOINTMENTS] Toplam: 32, Müsait: 18, Dağılım: {'açık': 18, 'dolu': 3, 'web_kapasite_dolu': 11}
+[2026-03-24 10:06:48] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-24 10:06:51] [BILGI] Hafta 3 taranıyor...
+[2026-03-24 10:06:51]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:06:51]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:06:51]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:06:51]   [APPOINTMENTS] Toplam: 32, Müsait: 23, Dağılım: {'açık': 23, 'web_kapasite_dolu': 9}
+[2026-03-24 10:06:52] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-24 10:06:55] [BILGI] Hafta 4 taranıyor...
+[2026-03-24 10:06:55]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:06:55]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:06:55]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:06:55]   [APPOINTMENTS] Toplam: 32, Müsait: 23, Dağılım: {'açık': 23, 'web_kapasite_dolu': 9}
+[2026-03-24 10:07:06] [UYARI] 'Sonra' butonu bulunamadı.
+[2026-03-24 10:07:06] [BILGI] Toplam 4 hafta tarandı (daha fazla hafta yok).
+[2026-03-24 10:07:06] [BILGI] MÜSAİT: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi — 24.03.2026: 15:00, 14:00, 15:00, 14:00 | 25.03.2026: 15:00, 14:00, 13:00, 11:00, 15:00, 14:00, 13:00, 11:00 | 26.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 27.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 30.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 31.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 01.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 | 02.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 06.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 07.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 08.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00
+[2026-03-24 10:07:06] [BILGI] Taranıyor: Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi
+[2026-03-24 10:07:06]   [UNIT-COMBO] 3 aday combo bulundu, doğrulanıyor...
+[2026-03-24 10:07:07] [NOTIFY] Telegram mesajı gönderildi: 🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>
+
+🏥 <b>Bölüm:</b> ...
+[2026-03-24 10:07:08]   [UNIT-COMBO] Aday index 5 tarih combo'su — atlanıyor (örnek: ['1994', '2025', '2024'])
+[2026-03-24 10:07:10]   [UNIT-COMBO] Aday index 4 tarih combo'su — atlanıyor (örnek: ['1994', '2025', '2024'])
+[2026-03-24 10:07:11]   [UNIT-COMBO] Birim/doktor combo doğrulandı (index 3, 5 seçenek, örnek: ['Hacettepe Üniversitesi Er', 'Hacettepe Üniversitesi Ço', 'Hacettepe Üniversitesi On'])
+[2026-03-24 10:07:52]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:07:52]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:07:52]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:07:52]   [APPOINTMENTS] Toplam: 32, Müsait: 23, Dağılım: {'açık': 23, 'web_kapasite_dolu': 9}
+[2026-03-24 10:08:04] [UYARI] 'Sonra' butonu bulunamadı.
+[2026-03-24 10:08:04] [BILGI] Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi için toplam 1 hafta tarandı.
+[2026-03-24 10:08:04] [BILGI] MÜSAİT: Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi — 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 06.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 07.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 08.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00
+[2026-03-24 10:08:04] [2026-03-24T10:06:45.668930] 2 alternatif tarandı. Toplam görünen: 160, müsait: 105
+[2026-03-24 10:08:04] [2026-03-24T10:06:45.668930] *** MÜSAİT RANDEVU: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi: 24.03.2026: 15:00, 14:00, 15:00, 14:00 | 25.03.2026: 15:00, 14:00, 13:00, 11:00, 15:00, 14:00, 13:00, 11:00 | 26.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 27.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 30.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 31.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 01.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 | 02.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 06.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 07.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 08.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00; Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi: 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 06.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 07.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 08.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 ***
+[2026-03-24 10:08:04] [PROBE] Açık slotların alt-saatleri keşfediliyor...
+[2026-03-24 10:08:04] [PROBE] 'Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi' alternatifine geçiliyor...
+[2026-03-24 10:08:06] [NOTIFY] Telegram mesajı gönderildi: 🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>
+
+🏥 <b>Bölüm:</b> ...
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 24.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 24.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 24.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 24.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 25.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 25.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 25.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 11:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 25.03.2026 11:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 26.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 26.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 26.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 26.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 26.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 26.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 27.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 27.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 27.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 27.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 27.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 27.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 30.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 30.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 30.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 30.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 30.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 30.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 31.03.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 31.03.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 31.03.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 31.03.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 31.03.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 31.03.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 01.04.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 01.04.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 01.04.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 11:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 01.04.2026 11:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 01.04.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 02.04.2026 15:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 02.04.2026 14:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 02.04.2026 13:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 02.04.2026 10:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 02.04.2026 09:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Slot tıklanamadı: 02.04.2026 08:00
+[2026-03-24 10:08:46] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 15:00
+[2026-03-24 10:08:47] [PROBE] 03.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:08:49] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 14:00
+[2026-03-24 10:08:50] [PROBE] 03.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:08:51] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 13:00
+[2026-03-24 10:08:51] [PROBE] 03.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:08:52] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 10:00
+[2026-03-24 10:08:53] [PROBE] 03.04.2026 10:00 → Alt-saatler: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30']
+[2026-03-24 10:08:54] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 09:00
+[2026-03-24 10:08:55] [PROBE] 03.04.2026 09:00 → Alt-saatler: ['09:00', '09:05', '09:10', '09:15', '09:20', '09:25', '09:30', '09:35', '09:40', '09:45', '09:50', '09:55']
+[2026-03-24 10:08:56] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 08:00
+[2026-03-24 10:08:57] [PROBE] 03.04.2026 08:00 → Alt-saatler: ['08:30', '08:35', '08:40', '08:45', '08:50', '08:55']
+[2026-03-24 10:08:57] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 15:00
+[2026-03-24 10:08:58] [PROBE] 06.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:08:59] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 14:00
+[2026-03-24 10:09:00] [PROBE] 06.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:09:01] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 13:00
+[2026-03-24 10:09:02] [PROBE] 06.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:09:03] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 10:00
+[2026-03-24 10:09:03] [PROBE] 06.04.2026 10:00 → Alt-saatler: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30']
+[2026-03-24 10:09:04] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 09:00
+[2026-03-24 10:09:05] [PROBE] 06.04.2026 09:00 → Alt-saatler: ['09:00', '09:05', '09:10', '09:15', '09:20', '09:25', '09:35', '09:40', '09:45', '09:50', '09:55']
+[2026-03-24 10:09:06] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 08:00
+[2026-03-24 10:09:07] [PROBE] 06.04.2026 08:00 → Alt-saatler: ['08:35', '08:40', '08:45', '08:50', '08:55']
+[2026-03-24 10:09:08] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 15:00
+[2026-03-24 10:09:09] [PROBE] 07.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:09:09] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 14:00
+[2026-03-24 10:09:10] [PROBE] 07.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:09:11] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 13:00
+[2026-03-24 10:09:12] [PROBE] 07.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:09:13] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 10:00
+[2026-03-24 10:09:14] [PROBE] 07.04.2026 10:00 → Alt-saatler: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30']
+[2026-03-24 10:09:14] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 09:00
+[2026-03-24 10:09:15] [PROBE] 07.04.2026 09:00 → Alt-saatler: ['09:00', '09:05', '09:10', '09:15', '09:20', '09:25', '09:30', '09:35', '09:40', '09:45', '09:50', '09:55']
+[2026-03-24 10:09:16] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 08:00
+[2026-03-24 10:09:17] [PROBE] 07.04.2026 08:00 → Alt-saatler: ['08:30', '08:35', '08:40', '08:45', '08:50', '08:55']
+[2026-03-24 10:09:18] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 15:00
+[2026-03-24 10:09:19] [PROBE] 08.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:09:20] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 14:00
+[2026-03-24 10:09:20] [PROBE] 08.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:09:21] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 13:00
+[2026-03-24 10:09:22] [PROBE] 08.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:09:23] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 11:00
+[2026-03-24 10:09:24] [PROBE] 08.04.2026 11:00 → Alt-saatler: ['11:00', '11:10', '11:20', '11:30', '11:40']
+[2026-03-24 10:09:25] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 10:00
+[2026-03-24 10:09:26] [PROBE] 08.04.2026 10:00 → Alt-saatler: ['10:30', '10:40', '10:50']
+[2026-03-24 10:09:26] [PROBE] Toplam 222 alt-saat keşfedildi
+[2026-03-24 10:19:54] [SESSION] Idle timeout: 1503**** — kapatılıyor
+[2026-03-24 10:27:45] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:27:45] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:27:45] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:27:45] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:27:53] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:27:53] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:27:53] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:27:53] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:28:24] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:28:24] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:28:24] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:28:24] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:28:46] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:28:46] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:28:46] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:28:46] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:29:09] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:29:09] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:29:09] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:29:09] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:29:14] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:29:20] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:29:20] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:29:20] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:29:27] [BILGI] 2Captcha API anahtarı mevcut. Google güven adımı atlanıyor (hızlı yol).
+[2026-03-24 10:29:35] [BILGI] TC Kimlik No dolduruluyor...
+[2026-03-24 10:29:42] [BILGI] Doğum tarihi dolduruluyor...
+[2026-03-24 10:29:51] [BILGI] Form alanları dolduruldu.
+[2026-03-24 10:29:56] [BILGI] reCAPTCHA işleniyor...
+[2026-03-24 10:29:57] [BILGI] reCAPTCHA algılandı.
+[2026-03-24 10:29:57] [BILGI] CAPTCHA_API_KEY mevcut — 2captcha birincil yöntem olarak deneniyor...
+[2026-03-24 10:30:01]   [2captcha] === Token deneme 1/2 ===
+[2026-03-24 10:30:01]   [2captcha] Sitekey iframe src'den alındı: 6Lcf758UAAAA...
+[2026-03-24 10:30:01]   [2captcha] Sitekey: 6Lcf758UAAAAAAT_... | URL: https://hastanerandevu.hacettepe.edu.tr/nucleus-hastaportal-
+[2026-03-24 10:30:01]   [2captcha] Çözüm isteniyor... (genellikle 20-60 saniye)
+[2026-03-24 10:32:56]   [2captcha] Captcha çözülemedi (ERROR_CAPTCHA_UNSOLVABLE).
+[2026-03-24 10:32:56] [UYARI] 2captcha başarısız oldu. Alternatif yöntemler deneniyor...
+[2026-03-24 10:32:59] [BILGI] Auto-solve denemeleri başlıyor...
+[2026-03-24 10:33:04]   [Deneme 1] Fare hareketi simüle ediliyor...
+[2026-03-24 10:33:13]   [Deneme 1] Checkbox tıklandı, sonuç bekleniyor...
+[2026-03-24 10:33:15] [BILGI] reCAPTCHA 1. denemede otomatik geçildi!
+[2026-03-24 10:33:18] [BILGI] Form gönderiliyor...
+[2026-03-24 10:33:18] [BILGI] Giriş butonu tıklandı: True
+[2026-03-24 10:33:24] [BILGI] Bilgi tamamlama dialogu bulundu — login başarılı!
+[2026-03-24 10:33:24] [BILGI] Bilgi tamamlama dialogu kontrol ediliyor...
+[2026-03-24 10:33:24] [BILGI] Vaadin dialog overlay bulundu!
+[2026-03-24 10:33:25] [BILGI] Telefon dolduruldu: 544***
+[2026-03-24 10:33:26] [BILGI] Onayla tıklandı!
+[2026-03-24 10:33:28] [BILGI] Dialog kapandı.
+[2026-03-24 10:33:30] [BILGI] Arama yapılıyor: Anestezi
+[2026-03-24 10:33:43]   [ARAMA] Sayfada input elementi bekleniyor (timeout aşıldı)...
+[2026-03-24 10:33:43]   [ARAMA] Arama alanı label-fallback ile bulundu.
+[2026-03-24 10:33:43]   [ARAMA] Arama alanı bulundu, yazılıyor: Anestezi...
+[2026-03-24 10:33:46]   [ARAMA] Enter ile arama tetiklendi.
+[2026-03-24 10:33:49]   [ARAMA] Dialog/modal açıldı.
+[2026-03-24 10:33:49]   [ARAMA] Dialog içi arama alanı bulundu, yazılıyor...
+[2026-03-24 10:33:54]   [ARAMA] 4 alternatif bulundu: ['Ek Bina Anestezi Poliklinik Odası 1 - Ha', 'Ek Bina Anestezi Poliklinik Odası 2 - Ha', 'Ek Bina Anestezi Poliklinik Odası 1 - Ha', 'Ek Bina Anestezi Poliklinik Odası 2 - Ha']
+[2026-03-24 10:33:54]   [ARAMA] İlk alternatif seçiliyor: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi
+[2026-03-24 10:33:55]   [ARAMA] Sonuç seçildi!
+[2026-03-24 10:33:57] [BILGI] Arama: başarılı
+[2026-03-24 10:34:01] [BILGI] Randevu tipi seçiliyor: internet randevu
+[2026-03-24 10:34:01]   [TYPE-COMBO] Randevu tipi combo bulundu (index 6, değer: '')
+[2026-03-24 10:34:05]   [TYPE-COMBO] Scoped seçenekler: ['1994', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014', '2013', '2012', '2011', '2010', '2009', 'Mayıs', 'Mayıs', 'Temmuz', 'Ekim', 'Kasım', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık', '30', '13', '23', '30', '31', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', 'İnternet Sonuç', 'İnternetten Randevu']
+[2026-03-24 10:34:15] [BILGI] Randevu tipi seçildi: İnternetten Randevu
+[2026-03-24 10:34:18]   [GRID-WAIT] Deneme 1: time=False, grid=False, table=False
+[2026-03-24 10:34:20]   [GRID-WAIT] Deneme 2: time=True, grid=False, table=False
+[2026-03-24 10:34:21] [BILGI] Randevular analiz ediliyor...
+[2026-03-24 10:34:21]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:34:21]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:34:21]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:34:21]   [APPOINTMENTS] Toplam: 32, Müsait: 18, Dağılım: {'açık': 18, 'dolu': 2, 'web_kapasite_dolu': 12}
+[2026-03-24 10:34:21] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-24 10:34:24] [BILGI] Hafta 2 taranıyor...
+[2026-03-24 10:34:24]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:34:24]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:34:24]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:34:24]   [APPOINTMENTS] Toplam: 32, Müsait: 18, Dağılım: {'açık': 18, 'dolu': 2, 'web_kapasite_dolu': 12}
+[2026-03-24 10:34:25] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-24 10:34:28] [BILGI] Hafta 3 taranıyor...
+[2026-03-24 10:34:28]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:34:28]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:34:28]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:34:28]   [APPOINTMENTS] Toplam: 32, Müsait: 23, Dağılım: {'açık': 23, 'web_kapasite_dolu': 9}
+[2026-03-24 10:34:28] [BILGI] 'Sonra' butonuna tıklandı.
+[2026-03-24 10:34:31] [BILGI] Hafta 4 taranıyor...
+[2026-03-24 10:34:31]   [APPOINTMENTS-DIAG] grid=0, table=0, hasTime=True
+[2026-03-24 10:34:31]   [APPOINTMENTS-JS] dateHeaders: 4 found
+[2026-03-24 10:34:31]   [APPOINTMENTS-JS] total_visible: 32
+[2026-03-24 10:34:31]   [APPOINTMENTS] Toplam: 32, Müsait: 23, Dağılım: {'açık': 23, 'web_kapasite_dolu': 9}
+[2026-03-24 10:34:42] [UYARI] 'Sonra' butonu bulunamadı.
+[2026-03-24 10:34:42] [BILGI] Toplam 4 hafta tarandı (daha fazla hafta yok).
+[2026-03-24 10:34:42] [BILGI] MÜSAİT: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi — 24.03.2026: 15:00, 14:00, 15:00, 14:00 | 25.03.2026: 15:00, 14:00, 13:00, 11:00, 15:00, 14:00, 13:00, 11:00 | 26.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 27.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 30.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 31.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 01.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 | 02.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 06.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 07.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 08.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00
+[2026-03-24 10:34:42] [BILGI] Taranıyor: Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi
+[2026-03-24 10:34:42]   [UNIT-COMBO] 3 aday combo bulundu, doğrulanıyor...
+[2026-03-24 10:34:43] [NOTIFY] Telegram mesajı gönderildi: 🚨 <b>MÜSAİT RANDEVU BULUNDU!</b>
+
+🏥 <b>Bölüm:</b> ...
+[2026-03-24 10:34:44]   [UNIT-COMBO] Aday index 5 tarih combo'su — atlanıyor (örnek: ['1994', '2025', '2024'])
+[2026-03-24 10:34:47]   [UNIT-COMBO] Aday index 4 tarih combo'su — atlanıyor (örnek: ['1994', '2025', '2024'])
+[2026-03-24 10:34:49]   [UNIT-COMBO] Aday index 3 tarih combo'su — atlanıyor (örnek: ['1994', '2025', '2024'])
+[2026-03-24 10:34:49]   [UNIT-COMBO] Tüm adaylar elendi — birim/doktor combo bulunamadı.
+[2026-03-24 10:34:49] [UYARI] Seçilemedi: Ek Bina Anestezi Poliklinik Odası 2 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi
+[2026-03-24 10:34:49] [2026-03-24T10:34:21.805120] 1 alternatif tarandı. Toplam görünen: 128, müsait: 82
+[2026-03-24 10:34:49] [2026-03-24T10:34:21.805120] *** MÜSAİT RANDEVU: Ek Bina Anestezi Poliklinik Odası 1 - Hacettepe Üniversitesi Erişkin HastanesiAnestezi: 24.03.2026: 15:00, 14:00, 15:00, 14:00 | 25.03.2026: 15:00, 14:00, 13:00, 11:00, 15:00, 14:00, 13:00, 11:00 | 26.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 27.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00, 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 30.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 31.03.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 01.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 | 02.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 03.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 06.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 07.04.2026: 15:00, 14:00, 13:00, 10:00, 09:00, 08:00 | 08.04.2026: 15:00, 14:00, 13:00, 11:00, 10:00 ***
+[2026-03-24 10:34:49] [PROBE] Açık slotların alt-saatleri keşfediliyor...
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 24.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 24.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 24.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 24.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 25.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 25.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 25.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 25.03.2026 11:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 25.03.2026 11:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 26.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 26.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 26.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 26.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 26.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 26.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 26.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 27.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 27.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 27.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 27.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 27.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 27.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 27.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 30.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 30.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 30.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 30.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 30.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 30.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 30.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 31.03.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 31.03.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 31.03.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 31.03.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 31.03.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 31.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 31.03.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 01.04.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 01.04.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 01.04.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 11:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 01.04.2026 11:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 01.04.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 01.04.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 02.04.2026 15:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 02.04.2026 14:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 02.04.2026 13:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 02.04.2026 10:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 02.04.2026 09:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 02.04.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Slot tıklanamadı: 02.04.2026 08:00
+[2026-03-24 10:34:49] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 15:00
+[2026-03-24 10:34:50] [PROBE] 03.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:34:51] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 14:00
+[2026-03-24 10:34:52] [PROBE] 03.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:34:53] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 13:00
+[2026-03-24 10:34:53] [PROBE] 03.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:34:54] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 10:00
+[2026-03-24 10:34:55] [PROBE] 03.04.2026 10:00 → Alt-saatler: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30']
+[2026-03-24 10:34:56] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 09:00
+[2026-03-24 10:34:57] [PROBE] 03.04.2026 09:00 → Alt-saatler: ['09:00', '09:05', '09:10', '09:15', '09:20', '09:25', '09:30', '09:35', '09:40', '09:45', '09:50', '09:55']
+[2026-03-24 10:34:58] [PROBE] Alt-saatler keşfediliyor: 03.04.2026 08:00
+[2026-03-24 10:34:59] [PROBE] 03.04.2026 08:00 → Alt-saatler: ['08:30', '08:35', '08:40', '08:45', '08:50', '08:55']
+[2026-03-24 10:34:59] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 15:00
+[2026-03-24 10:35:00] [PROBE] 06.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:35:01] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 14:00
+[2026-03-24 10:35:02] [PROBE] 06.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:35:03] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 13:00
+[2026-03-24 10:35:04] [PROBE] 06.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:35:05] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 10:00
+[2026-03-24 10:35:05] [PROBE] 06.04.2026 10:00 → Alt-saatler: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30']
+[2026-03-24 10:35:06] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 09:00
+[2026-03-24 10:35:07] [PROBE] 06.04.2026 09:00 → Alt-saatler: ['09:00', '09:05', '09:10', '09:15', '09:20', '09:25', '09:35', '09:40', '09:45', '09:50', '09:55']
+[2026-03-24 10:35:08] [PROBE] Alt-saatler keşfediliyor: 06.04.2026 08:00
+[2026-03-24 10:35:09] [PROBE] 06.04.2026 08:00 → Alt-saatler: ['08:35', '08:40', '08:45', '08:50', '08:55']
+[2026-03-24 10:35:10] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 15:00
+[2026-03-24 10:35:10] [PROBE] 07.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:35:11] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 14:00
+[2026-03-24 10:35:12] [PROBE] 07.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:35:13] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 13:00
+[2026-03-24 10:35:14] [PROBE] 07.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:35:15] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 10:00
+[2026-03-24 10:35:15] [PROBE] 07.04.2026 10:00 → Alt-saatler: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30']
+[2026-03-24 10:35:16] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 09:00
+[2026-03-24 10:35:17] [PROBE] 07.04.2026 09:00 → Alt-saatler: ['09:00', '09:05', '09:10', '09:15', '09:20', '09:25', '09:30', '09:35', '09:40', '09:45', '09:50', '09:55']
+[2026-03-24 10:35:18] [PROBE] Alt-saatler keşfediliyor: 07.04.2026 08:00
+[2026-03-24 10:35:19] [PROBE] 07.04.2026 08:00 → Alt-saatler: ['08:30', '08:35', '08:40', '08:45', '08:50', '08:55']
+[2026-03-24 10:35:20] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 15:00
+[2026-03-24 10:35:21] [PROBE] 08.04.2026 15:00 → Alt-saatler: ['15:00', '15:05', '15:10', '15:15', '15:20', '15:25', '15:30']
+[2026-03-24 10:35:21] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 14:00
+[2026-03-24 10:35:22] [PROBE] 08.04.2026 14:00 → Alt-saatler: ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35', '14:40', '14:45', '14:50', '14:55']
+[2026-03-24 10:35:23] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 13:00
+[2026-03-24 10:35:24] [PROBE] 08.04.2026 13:00 → Alt-saatler: ['13:30', '13:35', '13:40', '13:45', '13:50', '13:55']
+[2026-03-24 10:35:25] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 11:00
+[2026-03-24 10:35:26] [PROBE] 08.04.2026 11:00 → Alt-saatler: ['11:00', '11:10', '11:20', '11:30', '11:40']
+[2026-03-24 10:35:26] [PROBE] Alt-saatler keşfediliyor: 08.04.2026 10:00
+[2026-03-24 10:35:27] [PROBE] 08.04.2026 10:00 → Alt-saatler: ['10:30', '10:40', '10:50']
+[2026-03-24 10:35:28] [PROBE] Toplam 222 alt-saat keşfedildi
+[2026-03-24 10:45:56] [SESSION] Idle timeout: 1503**** — kapatılıyor
+[2026-03-24 10:47:28] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:47:28] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:47:28] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:47:28] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 10:47:38] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 10:47:38] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 10:47:38] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 10:47:38] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:14:33] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:14:34] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:14:34] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:14:34] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:14:41] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:14:41] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:14:41] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:14:41] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:14:49] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:14:49] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:14:49] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:14:49] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:15:00] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:15:00] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:15:00] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:15:00] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:23:13] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:23:13] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:23:13] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:23:13] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:23:35] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:23:36] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:23:36] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:23:36] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:24:04] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 11:24:04] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 11:24:04] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 11:24:04] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 11:31:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:31:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:31:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:31:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:31:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:32:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:33:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:34:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:35:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:36:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:37:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:38:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:39:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:40:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:41:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:42:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:43:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:44:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:45:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:46:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:47:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:48:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:49:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:50:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:51:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:52:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:53:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:54:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:55:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:56:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:57:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:58:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 11:59:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:00:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:01:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:02:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:03:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:04:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:05:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:06:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:07:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:08:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:09:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:10:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:11:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:12:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:13:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:14:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:15:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:16:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:17:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:18:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:19:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 12:21:31] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 12:21:31] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 12:21:31] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 12:21:31] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 12:51:16] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 12:51:17] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 12:51:17] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 12:51:17] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 12:52:02] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 12:52:02] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 12:52:02] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 12:52:02] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 12:52:18] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 12:52:18] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 12:52:18] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 12:52:18] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 13:57:03] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 13:57:03] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 13:57:03] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 13:57:03] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 13:57:30] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 13:57:30] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 13:57:30] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 13:57:30] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 13:58:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:58:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:58:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:58:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 13:59:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:00:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:01:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:02:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:03:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:04:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:05:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:06:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:07:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:08:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:09:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:10:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:11:55] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:05] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:15] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:20] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:25] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:30] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:35] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:40] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:45] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:50] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:12:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:13:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:14:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:15:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:16:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:17:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:18:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:19:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:20:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:21:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:22:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:23:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:24:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:25:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:51] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:26:56] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:01] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:06] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:11] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:16] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:31] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:36] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:41] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 14:27:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 15:06:29] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 15:06:30] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 15:06:30] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 15:06:30] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 15:06:44] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 15:06:44] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 15:06:44] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 15:06:44] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 15:06:53] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 15:06:53] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 15:06:53] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 15:06:53] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...

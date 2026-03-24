@@ -604,6 +604,17 @@ def _solve_with_2captcha(page, api_key, attempt=1, max_attempts=2, cancel_event=
                     el.value = token;
                     el.innerHTML = token;
                     el.style.display = 'block';
+                    el.style.position = 'absolute';
+                    el.style.left = '-9999px';
+                    el.style.top = '0';
+                    el.style.width = '1px';
+                    el.style.height = '1px';
+                    el.style.opacity = '0';
+                    el.style.pointerEvents = 'none';
+                    el.setAttribute('aria-hidden', 'true');
+                    try { el.dispatchEvent(new Event('input', {bubbles: true})); } catch(e) {}
+                    try { el.dispatchEvent(new Event('change', {bubbles: true})); } catch(e) {}
+                    try { el.dispatchEvent(new Event('blur', {bubbles: true})); } catch(e) {}
                 });
             });
 
@@ -949,7 +960,7 @@ def handle_info_dialog(page, phone, email):
         print("[BILGI] Vaadin dialog overlay bulundu!")
     except Exception:
         try:
-            onayla = page.get_by_role("button", name=re.compile(r"onayla", re.I))
+            onayla = page.get_by_role("button", name=re.compile(r"onayla|confirm|approve|ok|save", re.I))
             if onayla.count() == 0:
                 print("[BILGI] Bilgi dialogu yok, devam.")
                 return True
@@ -1007,7 +1018,7 @@ def handle_info_dialog(page, phone, email):
     # Onayla butonu
     human_delay(300, 600)
     for get_btn in [
-        lambda: page.get_by_role("button", name=re.compile(r"onayla", re.I)).first,
+        lambda: page.get_by_role("button", name=re.compile(r"onayla|confirm|approve|ok|save", re.I)).first,
         lambda: page.locator("vaadin-dialog-overlay vaadin-button").first,
         lambda: page.locator("vaadin-dialog-overlay button").first,
     ]:
@@ -3502,7 +3513,7 @@ class HacettepeBot:
                 dialog = page.locator("vaadin-dialog-overlay")
                 if dialog.count() > 0 and dialog.first.is_visible():
                     dialog_text = (dialog.first.text_content() or "").lower()
-                    if "giriş" not in dialog_text:  # Giriş dialogu değilse
+                    if "giriş" not in dialog_text and "login" not in dialog_text:  # Giriş dialogu değilse
                         print("[BILGI] Dialog bulundu — callback login'i tamamladı!")
                         handle_info_dialog(page, cfg["phone"], cfg["email"])
                         return True
@@ -3511,7 +3522,8 @@ class HacettepeBot:
                 body_txt = page.evaluate(
                     "() => (document.body ? document.body.innerText || '' : '').substring(0, 500)"
                 ).lower()
-                if "güvenli çıkış" in body_txt or "randevularım" in body_txt or "birim veya" in body_txt:
+                if "güvenli çıkış" in body_txt or "randevularım" in body_txt or "birim veya" in body_txt or \
+                   "logout" in body_txt or "appointments" in body_txt or "department" in body_txt:
                     print(f"[BILGI] Post-login metin bulundu — callback login'i tamamladı ({(_cb_wait+1)*2}s)!")
                     handle_info_dialog(page, cfg["phone"], cfg["email"])
                     return True
@@ -3533,34 +3545,73 @@ class HacettepeBot:
         except Exception:
             pass
 
+        login_button_re = re.compile(r"(giriş|login|sign\s*in)", re.I)
+
         # ── Form gönder ──
         self._emit("submit", "[BILGI] Form gönderiliyor...")
         submitted = False
-        # Strateji 1: Vaadin buton tıkla (force=True ile overlay bypass)
+        submit_strategy = ""
+        # Strateji 1: Erişilebilir butonu tıkla (canlı sitede "Login" etiketi kullanılıyor)
         for get_btn in [
-            lambda: page.locator("vaadin-button").filter(has_text=re.compile(r"giriş", re.I)).first,
-            lambda: page.get_by_role("button", name=re.compile(r"giriş", re.I)).first,
+            lambda: page.get_by_role("button", name=login_button_re).first,
+            lambda: page.locator("vaadin-button, button").filter(has_text=login_button_re).first,
         ]:
             try:
                 btn = get_btn()
                 if btn.count() > 0:
-                    btn.click(timeout=5000, force=True)
+                    btn.click(timeout=5000)
                     submitted = True
+                    submit_strategy = "button"
                     break
             except Exception:
                 continue
-        # Strateji 2: click_by_text fallback
+
+        # Strateji 2: Shadow DOM / host farklarına karşı native click fallback
         if not submitted:
-            submitted = click_by_text(page, re.compile(r"(devam|sorgula|giriş|ileri|randevu\s*ara)", re.I))
-        # Strateji 3: Enter tuşu
+            try:
+                submitted = bool(_eval_in_main_world(page, """() => {
+                    var matcher = /(giriş|login|sign\\s*in)/i;
+                    var nodes = Array.from(document.querySelectorAll('vaadin-button, button'));
+                    for (var i = 0; i < nodes.length; i++) {
+                        var node = nodes[i];
+                        var text = ((node.innerText || node.textContent || '') + ' ' +
+                                   ((node.getAttribute && node.getAttribute('aria-label')) || '')).trim();
+                        if (!matcher.test(text)) continue;
+                        var target = node;
+                        try {
+                            if (node.shadowRoot) {
+                                target = node.shadowRoot.querySelector('button') || node;
+                            }
+                        } catch(e) {}
+                        if (typeof target.click === 'function') {
+                            target.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }"""))
+                if submitted:
+                    submit_strategy = "main-world-click"
+            except Exception:
+                submitted = False
+
+        # Strateji 3: click_by_text fallback
+        if not submitted:
+            submitted = click_by_text(page, re.compile(r"(devam|sorgula|giriş|login|ileri|randevu\s*ara)", re.I))
+            if submitted:
+                submit_strategy = "text-fallback"
+
+        # Strateji 4: Enter tuşu
         if not submitted:
             try:
                 page.keyboard.press("Enter")
                 submitted = True
+                submit_strategy = "enter"
                 print("[BILGI] Enter tuşu ile gönderildi.")
             except Exception:
                 pass
-        self._emit("submit", f"[BILGI] Giriş butonu tıklandı: {submitted}")
+        strategy_suffix = f" ({submit_strategy})" if submit_strategy else ""
+        self._emit("submit", f"[BILGI] Giriş butonu tıklandı: {submitted}{strategy_suffix}")
         self._cancellable_sleep(3)  # İlk kısa bekleme
 
         # ── Vaadin SPA geçişini aktif bekle: TC Kimlik alanı kaybolmalı ──
@@ -3587,7 +3638,8 @@ class HacettepeBot:
                 body_text = page.evaluate(
                     "() => (document.body ? document.body.innerText || '' : '').substring(0, 500)"
                 ).lower()
-                if "güvenli çıkış" in body_text or "randevularım" in body_text or "birim veya" in body_text:
+                if "güvenli çıkış" in body_text or "randevularım" in body_text or "birim veya" in body_text or \
+                   "logout" in body_text or "appointments" in body_text or "department" in body_text:
                     login_transition_ok = True
                     print(f"[BILGI] Vaadin SPA geçişi tamamlandı (post-login metin bulundu, {(_wait+1)*2}s).")
                     break
@@ -3628,7 +3680,7 @@ class HacettepeBot:
         if not login_ok:
             try:
                 post_login = page.locator("button, vaadin-button, a").filter(
-                    has_text=re.compile(r"güvenli|randevularım|çıkış|ara", re.I)
+                    has_text=re.compile(r"güvenli|randevularım|çıkış|ara|logout|appointment|search", re.I)
                 )
                 if post_login.count() > 0:
                     login_ok = True
@@ -3665,7 +3717,9 @@ class HacettepeBot:
                             body_txt = page.evaluate(
                                 "() => (document.body ? document.body.innerText || '' : '').substring(0, 1000)"
                             ).lower()
-                            if "birim" in body_txt or "doktor" in body_txt or "randevularım" in body_txt or "güvenli çıkış" in body_txt:
+                            if "birim" in body_txt or "doktor" in body_txt or "randevularım" in body_txt or \
+                               "güvenli çıkış" in body_txt or "department" in body_txt or \
+                               "doctor" in body_txt or "appointments" in body_txt or "logout" in body_txt:
                                 login_ok = True
                                 print("[BILGI] Login başarılı — arama sayfası metni bulundu!")
                         except Exception:
@@ -3707,7 +3761,9 @@ class HacettepeBot:
                             if line in ("Giriş", "T.C. Kimlik", "Pasaport No", "Yıl", "Ay", "Gün"):
                                 continue
                             if "sisteme" in line.lower() or "hata" in line.lower() or \
-                               "doğrulama" in line.lower() or "gerekli" in line.lower():
+                               "doğrulama" in line.lower() or "gerekli" in line.lower() or \
+                               "error" in line.lower() or "required" in line.lower() or \
+                               "invalid" in line.lower() or "must" in line.lower():
                                 print(f"[BILGI] Hata mesajı: {line[:200]}")
                                 break
                     except Exception:

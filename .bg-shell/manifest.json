@@ -1,0 +1,16 @@
+[
+  {
+    "id": "20d6bf65",
+    "label": "hacettepe-server",
+    "command": "cd /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi && .venv/bin/python run.py 2>&1",
+    "cwd": "/Users/birkankader/Documents/Projects/HacettepeBot-Denemesi",
+    "ownerSessionFile": "/Users/birkankader/.gsd/sessions/--Users-birkankader-Documents-Projects-HacettepeBot-Denemesi--/2026-03-24T06-53-43-182Z_b623f64e-e6c8-4f11-8c59-134b4c764149.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1774337360187,
+    "processType": "server",
+    "group": null,
+    "readyPattern": null,
+    "readyPort": 8000,
+    "pid": 73357
+  }
+]

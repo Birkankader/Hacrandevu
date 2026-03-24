@@ -1,0 +1,165 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: 
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Online Appointment Login
+                - generic:
+                  - radiogroup:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Identity Number" [checked]
+                              - generic:
+                                - generic: Identity Number
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Passport No"
+                              - generic:
+                                - generic: Passport No
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Turkish Identity Number
+                      - generic:
+                        - generic:
+                          - generic:
+                            - textbox "Turkish Identity Number": "12345678901"
+                        - generic: 
+                  - generic:
+                    - generic:
+                      - generic: "Your Birth Year:"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Year
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Year": "2024"
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                              - text:            
+                            - generic [ref=e106]:
+                              - generic [ref=e107]:
+                                - generic: Month
+                              - generic [ref=e108]:
+                                - combobox "Month" [expanded] [active] [ref=e109]
+                                - generic:
+                                  - text: 
+                                  - generic [ref=e110]: 
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Day
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Day" [disabled]
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                  - iframe [ref=e47]:
+                    - generic [ref=f1e2]:
+                      - generic [ref=f1e3]:
+                        - checkbox "Ben robot değilim" [ref=f1e7]
+                        - generic [ref=f1e11]: Ben robot değilim
+                        - generic [ref=f1e13]:
+                          - text: Bu site
+                          - link "ücretsiz reCAPTCHA Kuruluş kotasını" [ref=f1e14] [cursor=pointer]:
+                            - /url: https://cloud.google.com/recaptcha/docs/billing-information
+                          - text: aşıyor.
+                      - generic [ref=f1e15]:
+                        - generic [ref=f1e18]: reCAPTCHA
+                        - generic [ref=f1e19]:
+                          - link "Gizlilik" [ref=f1e20] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/privacy/
+                          - text: "-"
+                          - link "Şartlar" [ref=f1e21] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/terms/
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: 
+                          - generic:
+                            - checkbox [checked]
+                      - generic:
+                        - generic:
+                          - generic: GPDR text
+                      - generic: read
+                  - generic:
+                    - button "Login":
+                      - generic:
+                        - generic:
+                          - generic: Login
+                - generic: Nucleus Online Appointment Version:3832 - Vaadin 23
+  - generic:
+    - generic:
+      - generic: Online
+  - listbox [ref=e113]:
+    - generic [ref=e114]:
+      - generic:
+        - option "January" [ref=e115]:
+          - generic [ref=e116]: 
+          - generic [ref=e117]:
+            - generic: January
+        - option "February" [ref=e118]:
+          - generic [ref=e119]: 
+          - generic [ref=e120]:
+            - generic: February
+        - option "March" [ref=e121]:
+          - generic [ref=e122]: 
+          - generic [ref=e123]:
+            - generic: March
+        - option "April" [ref=e124]:
+          - generic [ref=e125]: 
+          - generic [ref=e126]:
+            - generic: April
+        - option "May" [ref=e127]:
+          - generic [ref=e128]: 
+          - generic [ref=e129]:
+            - generic: May
+        - option "June" [ref=e130]:
+          - generic [ref=e131]: 
+          - generic [ref=e132]:
+            - generic: June
+        - option "July" [ref=e133]:
+          - generic [ref=e134]: 
+          - generic [ref=e135]:
+            - generic: July
+        - option "August" [ref=e136]:
+          - generic [ref=e137]: 
+          - generic [ref=e138]:
+            - generic: August
+        - option "September" [ref=e139]:
+          - generic [ref=e140]: 
+          - generic [ref=e141]:
+            - generic: September
+        - option "October" [ref=e142]:
+          - generic [ref=e143]: 
+          - generic [ref=e144]:
+            - generic: October
+        - option "November" [ref=e145]:
+          - generic [ref=e146]: 
+          - generic [ref=e147]:
+            - generic: November
+        - option "December" [ref=e148]:
+          - generic [ref=e149]: 
+          - generic [ref=e150]:
+            - generic: December

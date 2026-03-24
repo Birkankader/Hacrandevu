@@ -1,0 +1,88 @@
+- generic [ref=e1]:
+  - generic [ref=e7]:
+    - generic:
+      - generic: 
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - img [ref=e12]
+        - generic [ref=e13]: Online Appointment Login
+      - generic [ref=e14]:
+        - radiogroup [ref=e15]:
+          - generic [ref=e17]:
+            - generic:
+              - generic [ref=e19]:
+                - radio "Identity Number" [checked] [ref=e21]
+                - generic [ref=e22]: Identity Number
+              - generic [ref=e24]:
+                - radio "Passport No" [ref=e26]
+                - generic [ref=e27]: Passport No
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic: Turkish Identity Number
+          - generic [ref=e31]:
+            - textbox "Turkish Identity Number" [ref=e32]: "12345678901"
+            - generic: 
+        - generic [ref=e33]:
+          - generic:
+            - generic [ref=e34]: "Your Birth Year:"
+            - generic [ref=e36]:
+              - generic:
+                - generic [ref=e37]:
+                  - generic [ref=e38]:
+                    - generic [ref=e39]:
+                      - generic: Year
+                    - generic [ref=e40]:
+                      - combobox "Year" [active] [ref=e41]: "2024"
+                      - generic:
+                        - text: 
+                        - generic [ref=e42]: 
+                  - text:            
+                - generic [ref=e106]:
+                  - generic [ref=e107]:
+                    - generic: Month
+                  - generic [ref=e108]:
+                    - combobox "Month" [ref=e109]
+                    - generic:
+                      - text: 
+                      - generic [ref=e110]: 
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: Day
+                    - generic:
+                      - generic:
+                        - generic:
+                          - combobox "Day" [disabled]
+                      - generic:
+                        - text: 
+                        - generic: 
+        - iframe [ref=e47]:
+          - generic [ref=f1e2]:
+            - generic [ref=f1e3]:
+              - checkbox "Ben robot değilim" [ref=f1e7]
+              - generic [ref=f1e11]: Ben robot değilim
+              - generic [ref=f1e13]:
+                - text: Bu site
+                - link "ücretsiz reCAPTCHA Kuruluş kotasını" [ref=f1e14] [cursor=pointer]:
+                  - /url: https://cloud.google.com/recaptcha/docs/billing-information
+                - text: aşıyor.
+            - generic [ref=f1e15]:
+              - generic [ref=f1e18]: reCAPTCHA
+              - generic [ref=f1e19]:
+                - link "Gizlilik" [ref=f1e20] [cursor=pointer]:
+                  - /url: https://www.google.com/intl/tr/policies/privacy/
+                - text: "-"
+                - link "Şartlar" [ref=f1e21] [cursor=pointer]:
+                  - /url: https://www.google.com/intl/tr/policies/terms/
+        - generic [ref=e48]:
+          - generic:
+            - generic [ref=e50]:
+              - generic [ref=e51]: 
+              - checkbox [checked] [ref=e52]
+            - generic [ref=e54]: GPDR text
+            - generic [ref=e55]: read
+        - button "Login" [ref=e57]:
+          - generic [ref=e59]:
+            - generic: Login
+      - generic [ref=e60]: Nucleus Online Appointment Version:3832 - Vaadin 23
+  - generic [ref=e4]: Online

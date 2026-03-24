@@ -1,0 +1,166 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic: 
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Online Appointment Login
+                - generic:
+                  - radiogroup:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Identity Number" [checked]
+                              - generic:
+                                - generic: Identity Number
+                          - generic:
+                            - generic:
+                              - generic:
+                                - radio "Passport No"
+                              - generic:
+                                - generic: Passport No
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Turkish Identity Number
+                      - generic:
+                        - generic:
+                          - generic:
+                            - textbox "Turkish Identity Number": "12345678901"
+                        - generic: 
+                  - generic:
+                    - generic:
+                      - generic: "Your Birth Year:"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Year
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Year": "2024"
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                              - text:            
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: Month
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - combobox "Month": January
+                                  - generic:
+                                    - text: 
+                                    - generic: 
+                              - text:            
+                            - generic [ref=e152]:
+                              - generic [ref=e153]:
+                                - generic: Day
+                              - generic [ref=e154]:
+                                - combobox "Day" [expanded] [active] [ref=e155]
+                                - generic:
+                                  - text: 
+                                  - generic [ref=e156]: 
+                  - iframe [ref=e47]:
+                    - generic [ref=f1e2]:
+                      - generic [ref=f1e3]:
+                        - checkbox "Ben robot değilim" [ref=f1e7]
+                        - generic [ref=f1e11]: Ben robot değilim
+                        - generic [ref=f1e13]:
+                          - text: Bu site
+                          - link "ücretsiz reCAPTCHA Kuruluş kotasını" [ref=f1e14] [cursor=pointer]:
+                            - /url: https://cloud.google.com/recaptcha/docs/billing-information
+                          - text: aşıyor.
+                      - generic [ref=f1e15]:
+                        - generic [ref=f1e18]: reCAPTCHA
+                        - generic [ref=f1e19]:
+                          - link "Gizlilik" [ref=f1e20] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/privacy/
+                          - text: "-"
+                          - link "Şartlar" [ref=f1e21] [cursor=pointer]:
+                            - /url: https://www.google.com/intl/tr/policies/terms/
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: 
+                          - generic:
+                            - checkbox [checked]
+                      - generic:
+                        - generic:
+                          - generic: GPDR text
+                      - generic: read
+                  - generic:
+                    - button "Login":
+                      - generic:
+                        - generic:
+                          - generic: Login
+                - generic: Nucleus Online Appointment Version:3832 - Vaadin 23
+  - generic:
+    - generic:
+      - generic: Online
+  - listbox [ref=e159]:
+    - generic [ref=e160]:
+      - generic:
+        - option "1" [ref=e161]:
+          - generic [ref=e162]: 
+          - generic [ref=e163]:
+            - generic: "1"
+        - option "2" [ref=e164]:
+          - generic [ref=e165]: 
+          - generic [ref=e166]:
+            - generic: "2"
+        - option "3" [ref=e167]:
+          - generic [ref=e168]: 
+          - generic [ref=e169]:
+            - generic: "3"
+        - option "4" [ref=e170]:
+          - generic [ref=e171]: 
+          - generic [ref=e172]:
+            - generic: "4"
+        - option "5" [ref=e173]:
+          - generic [ref=e174]: 
+          - generic [ref=e175]:
+            - generic: "5"
+        - option "6" [ref=e176]:
+          - generic [ref=e177]: 
+          - generic [ref=e178]:
+            - generic: "6"
+        - option "7" [ref=e179]:
+          - generic [ref=e180]: 
+          - generic [ref=e181]:
+            - generic: "7"
+        - option "8" [ref=e182]:
+          - generic [ref=e183]: 
+          - generic [ref=e184]:
+            - generic: "8"
+        - option "9" [ref=e185]:
+          - generic [ref=e186]: 
+          - generic [ref=e187]:
+            - generic: "9"
+        - option "10" [ref=e188]:
+          - generic [ref=e189]: 
+          - generic [ref=e190]:
+            - generic: "10"
+        - option "11" [ref=e191]:
+          - generic [ref=e192]: 
+          - generic [ref=e193]:
+            - generic: "11"
+        - option "12" [ref=e194]:
+          - generic [ref=e195]: 
+          - generic [ref=e196]:
+            - generic: "12"
