@@ -3545,7 +3545,44 @@ class HacettepeBot:
             except Exception:
                 pass
         self._emit("submit", f"[BILGI] Giriş butonu tıklandı: {submitted}")
-        self._cancellable_sleep(6)  # Vaadin server round-trip
+        self._cancellable_sleep(3)  # İlk kısa bekleme
+
+        # ── Vaadin SPA geçişini aktif bekle: TC Kimlik alanı kaybolmalı ──
+        # Login başarılıysa Vaadin sayfayı yeniler ve TC alanı kaybolur
+        login_transition_ok = False
+        for _wait in range(10):  # 10 x 2s = max 20 saniye
+            self._check_cancelled()
+            try:
+                tc_still = page.locator(
+                    'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i], '
+                    'vaadin-text-field[placeholder*="T.C." i]'
+                )
+                if tc_still.count() == 0:
+                    login_transition_ok = True
+                    print(f"[BILGI] Vaadin SPA geçişi tamamlandı ({(_wait+1)*2}s sonra).")
+                    break
+                # Bilgi dialogu veya post-login göstergesi var mı?
+                dialog = page.locator("vaadin-dialog-overlay")
+                if dialog.count() > 0 and dialog.first.is_visible():
+                    login_transition_ok = True
+                    print("[BILGI] Vaadin SPA geçişi tamamlandı (bilgi dialogu göründü).")
+                    break
+                # "Güvenli Çıkış" veya "Randevularım" metni var mı?
+                body_text = page.evaluate(
+                    "() => (document.body ? document.body.innerText || '' : '').substring(0, 500)"
+                ).lower()
+                if "güvenli çıkış" in body_text or "randevularım" in body_text or "birim veya" in body_text:
+                    login_transition_ok = True
+                    print(f"[BILGI] Vaadin SPA geçişi tamamlandı (post-login metin bulundu, {(_wait+1)*2}s).")
+                    break
+            except Exception:
+                pass
+            self._cancellable_sleep(2)
+
+        if not login_transition_ok:
+            print("[UYARI] Login sonrası sayfa geçişi tespit edilemedi — hâlâ login sayfasında olabilir!")
+            self._screenshot(page, "debug-login-transition-fail")
+        
         self._screenshot(page, "debug-after-giris")
 
         # Vaadin notification kontrolü (sunucu hata mesajı)
@@ -3584,15 +3621,39 @@ class HacettepeBot:
                 pass
 
         # Arama sayfası elementleri (login sonrası sayfa yüklendi mi?)
+        # DİKKAT: vaadin-combo-box login sayfasında da var (doğum tarihi),
+        # bu yüzden tek başına güvenilir bir gösterge DEĞİL.
         if not login_ok:
             try:
-                search_indicators = page.locator(
-                    'input[placeholder*="ara" i], input[placeholder*="search" i], '
-                    'vaadin-text-field[placeholder*="ara" i], vaadin-combo-box'
+                # Login sayfasına özgü elementler hâlâ var mı kontrol et
+                still_login = page.locator(
+                    'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i], '
+                    'vaadin-text-field[placeholder*="T.C." i]'
                 )
-                if search_indicators.count() > 0:
-                    login_ok = True
-                    print("[BILGI] Login başarılı — arama sayfası elementleri bulundu!")
+                if still_login.count() > 0:
+                    # Hâlâ login sayfasındayız — login başarısız
+                    print("[UYARI] Login sayfası elementleri hâlâ mevcut — login başarısız olmuş olabilir.")
+                else:
+                    # Login sayfası elementleri yok, arama sayfası elementleri var mı?
+                    search_indicators = page.locator(
+                        'input[placeholder*="ara" i], input[placeholder*="search" i], '
+                        'vaadin-text-field[placeholder*="ara" i]'
+                    )
+                    if search_indicators.count() > 0:
+                        login_ok = True
+                        print("[BILGI] Login başarılı — arama sayfası elementleri bulundu!")
+                    else:
+                        # Arama elementleri de yok — Vaadin geçiş beklenebilir
+                        # "Birim veya Doktor" metni var mı?
+                        try:
+                            body_txt = page.evaluate(
+                                "() => (document.body ? document.body.innerText || '' : '').substring(0, 1000)"
+                            ).lower()
+                            if "birim" in body_txt or "doktor" in body_txt or "randevularım" in body_txt or "güvenli çıkış" in body_txt:
+                                login_ok = True
+                                print("[BILGI] Login başarılı — arama sayfası metni bulundu!")
+                        except Exception:
+                            pass
             except Exception:
                 pass
 
@@ -3611,8 +3672,11 @@ class HacettepeBot:
             # (Vaadin SPA'da iframe DOM'da kalabilir ama sayfa değişmiş olabilir)
             try:
                 rc = page.locator('iframe[src*="recaptcha" i]')
-                tc_input = page.locator('input[name*="tc" i], input[id*="tc" i]')
-                still_on_login = rc.count() > 0 and tc_input.count() > 0
+                tc_input = page.locator(
+                    'input[name*="tc" i], input[id*="tc" i], '
+                    'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i]'
+                )
+                still_on_login = tc_input.count() > 0
                 if not still_on_login and rc.count() > 0:
                     # reCAPTCHA var ama TC input yok — muhtemelen login başarılı
                     print("[BILGI] reCAPTCHA iframe DOM'da kaldı ama TC input yok — login başarılı kabul ediliyor.")
