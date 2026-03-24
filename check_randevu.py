@@ -200,6 +200,29 @@ def click_by_text(page, regex):
     return False
 
 
+def _locator_visibility_stats(locator, max_checks=20):
+    """Locator için toplam ve görünür eleman sayısını döndür."""
+    total = 0
+    visible = 0
+    try:
+        total = locator.count()
+        for i in range(min(total, max_checks)):
+            try:
+                if locator.nth(i).is_visible():
+                    visible += 1
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return total, visible
+
+
+def _locator_has_visible(locator, max_checks=20):
+    """Locator içinde gerçekten görünür en az bir eleman var mı?"""
+    _, visible = _locator_visibility_stats(locator, max_checks=max_checks)
+    return visible > 0
+
+
 def ensure_kvkk(page):
     """KVKK onay kutusunu işaretle ve Vaadin'e state change bildir."""
     clicked = False
@@ -3503,7 +3526,7 @@ class HacettepeBot:
                     'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i], '
                     'vaadin-text-field[placeholder*="T.C." i]'
                 )
-                if tc_field.count() == 0:
+                if not _locator_has_visible(tc_field):
                     print(f"[BILGI] TC alanı kayboldu — callback login'i tamamladı ({(_cb_wait+1)*2}s)!")
                     # Bilgi dialogu varsa işle
                     handle_info_dialog(page, cfg["phone"], cfg["email"])
@@ -3624,7 +3647,7 @@ class HacettepeBot:
                     'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i], '
                     'vaadin-text-field[placeholder*="T.C." i]'
                 )
-                if tc_still.count() == 0:
+                if not _locator_has_visible(tc_still):
                     login_transition_ok = True
                     print(f"[BILGI] Vaadin SPA geçişi tamamlandı ({(_wait+1)*2}s sonra).")
                     break
@@ -3698,16 +3721,19 @@ class HacettepeBot:
                     'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i], '
                     'vaadin-text-field[placeholder*="T.C." i]'
                 )
-                if still_login.count() > 0:
+                login_total, login_visible = _locator_visibility_stats(still_login)
+                if login_visible > 0:
                     # Hâlâ login sayfasındayız — login başarısız
                     print("[UYARI] Login sayfası elementleri hâlâ mevcut — login başarısız olmuş olabilir.")
+                elif login_total > 0:
+                    print(f"[BILGI] Login selector'leri DOM'da kaldı ama görünür değil (total={login_total}) — hidden kalıntı olabilir.")
                 else:
                     # Login sayfası elementleri yok, arama sayfası elementleri var mı?
                     search_indicators = page.locator(
                         'input[placeholder*="ara" i], input[placeholder*="search" i], '
                         'vaadin-text-field[placeholder*="ara" i]'
                     )
-                    if search_indicators.count() > 0:
+                    if _locator_has_visible(search_indicators):
                         login_ok = True
                         print("[BILGI] Login başarılı — arama sayfası elementleri bulundu!")
                     else:
@@ -3746,7 +3772,8 @@ class HacettepeBot:
                     'input[name*="tc" i], input[id*="tc" i], '
                     'input[placeholder*="T.C." i], input[placeholder*="Kimlik No" i]'
                 )
-                still_on_login = tc_input.count() > 0
+                tc_total, tc_visible = _locator_visibility_stats(tc_input)
+                still_on_login = tc_visible > 0
                 if not still_on_login and rc.count() > 0:
                     # reCAPTCHA var ama TC input yok — muhtemelen login başarılı
                     print("[BILGI] reCAPTCHA iframe DOM'da kaldı ama TC input yok — login başarılı kabul ediliyor.")
@@ -3771,6 +3798,8 @@ class HacettepeBot:
                     print("[UYARI] Hâlâ login sayfasında — reCAPTCHA/giriş başarısız.")
                     self._screenshot(page, "login-failed")
                     raise RecaptchaFailed("Login sayfasından çıkılamadı")
+                elif tc_total > 0:
+                    print(f"[BILGI] TC input selector'leri DOM'da var ama görünür değil (total={tc_total}) — hidden login kalıntısı olabilir.")
             except RecaptchaFailed:
                 raise
             except Exception:

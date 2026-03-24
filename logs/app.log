@@ -1760,3 +1760,23 @@ Call log:
 [2026-03-24 15:06:53] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
 [2026-03-24 15:06:53] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
 [2026-03-24 15:06:53] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 15:49:10] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 15:49:10] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 15:49:10] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 15:49:10] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 15:49:34] [SHADOW] Arka plan zamanlayıcısı durduruldu.
+[2026-03-24 15:49:34] [LOG] Dosya loglama aktif: /Users/birkankader/Documents/Projects/HacettepeBot-Denemesi/logs/app.log
+[2026-03-24 15:49:34] [SHADOW] Arka plan zamanlayıcısı (Scheduler) başlatıldı.
+[2026-03-24 15:49:34] [TELEGRAM] Poller başlatıldı. Buton tıklamaları bekleniyor...
+[2026-03-24 16:43:08] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 16:43:21] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 16:43:26] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 16:59:46] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 16:59:59] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 17:00:04] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 17:17:10] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 17:22:37] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 18:30:54] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 18:30:59] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 18:31:04] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
+[2026-03-24 18:40:00] [TELEGRAM] Poller hatası: [Errno 8] nodename nor servname provided, or not known
