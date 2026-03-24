@@ -1222,6 +1222,8 @@ class HacettepeBot:
                                        'birim veya', 'arama yap'];
 
                     // ── Strateji A: vaadin-text-field[label] attribute kontrolü ──
+                    var loginExclude = ['t.c.', 'tc ', 'kimlik', 'pasaport', 'passport',
+                                        'şifre', 'password', 'parola'];
                     var vaadinFields = document.querySelectorAll('vaadin-text-field');
                     for (var vi = 0; vi < vaadinFields.length; vi++) {
                         var vf = vaadinFields[vi];
@@ -1229,7 +1231,15 @@ class HacettepeBot:
                         if (vf.closest('vaadin-dialog-overlay')) continue;
                         var vfLabel = (vf.getAttribute('label') || '').toLowerCase();
                         var vfPlaceholder = (vf.getAttribute('placeholder') || '').toLowerCase();
+                        var vfInp = vf.querySelector('input');
+                        if (!vfPlaceholder && vfInp) vfPlaceholder = (vfInp.getAttribute('placeholder') || '').toLowerCase();
                         var vfText = vfLabel + ' ' + vfPlaceholder;
+                        // Login alanlarını hariç tut
+                        var skipField = false;
+                        for (var le = 0; le < loginExclude.length; le++) {
+                            if (vfText.indexOf(loginExclude[le]) >= 0) { skipField = true; break; }
+                        }
+                        if (skipField) continue;
                         for (var st = 0; st < searchTerms.length; st++) {
                             if (vfText.indexOf(searchTerms[st]) >= 0) {
                                 vf.setAttribute('data-hacbot-search', 'true');
@@ -1354,6 +1364,9 @@ class HacettepeBot:
                         // Bu en güvenilir yöntem — arama alanı her zaman bağımsız bir text field
                         var independentFields = [];
                         var vaadinFields = document.querySelectorAll('vaadin-text-field');
+                        // Login alanı placeholder/label terimleri — bunları hariç tut
+                        var loginTerms = ['t.c.', 'tc ', 'kimlik', 'pasaport', 'passport',
+                                          'şifre', 'password', 'parola'];
                         for (var vi = 0; vi < vaadinFields.length; vi++) {
                             var vf = vaadinFields[vi];
                             // Combo-box içindeki alanları atla
@@ -1371,8 +1384,19 @@ class HacettepeBot:
                             
                             var score = 0;
                             var ph = (vf.getAttribute('placeholder') || '').toLowerCase();
+                            if (!ph && inp) ph = (inp.getAttribute('placeholder') || '').toLowerCase();
                             var lbl = (vf.getAttribute('label') || '').toLowerCase();
                             var allText = ph + ' ' + lbl;
+                            
+                            // Login alanlarını hariç tut (TC, Pasaport, Şifre)
+                            var isLoginField = false;
+                            for (var lt = 0; lt < loginTerms.length; lt++) {
+                                if (allText.indexOf(loginTerms[lt]) >= 0) {
+                                    isLoginField = true;
+                                    break;
+                                }
+                            }
+                            if (isLoginField) continue; // Tamamen atla
                             
                             // Arama terimleri yüksek skor
                             if (allText.indexOf('ara') >= 0 || allText.indexOf('search') >= 0) score += 100;
@@ -1409,6 +1433,8 @@ class HacettepeBot:
                         }
 
                         // Strateji 3b (eski fallback): Herhangi bir non-combo input
+                        var loginTerms2 = ['t.c.', 'tc ', 'kimlik', 'pasaport', 'passport',
+                                           'şifre', 'password', 'parola'];
                         var fields = document.querySelectorAll(
                             'vaadin-text-field, input[type="text"], input[type="search"], input:not([type])');
                         var best2 = null;
@@ -1428,6 +1454,12 @@ class HacettepeBot:
                             var ph2 = (el.placeholder || el.getAttribute('placeholder') || '').toLowerCase();
                             var lbl2 = (el.getAttribute('label') || el.getAttribute('aria-label') || '').toLowerCase();
                             var allText2 = ph2 + ' ' + lbl2;
+                            // Login alanlarını hariç tut
+                            var isLogin2 = false;
+                            for (var lt2 = 0; lt2 < loginTerms2.length; lt2++) {
+                                if (allText2.indexOf(loginTerms2[lt2]) >= 0) { isLogin2 = true; break; }
+                            }
+                            if (isLogin2) continue;
                             if (allText2.indexOf('ara') >= 0 || allText2.indexOf('search') >= 0) score2 += 50;
                             if (allText2.indexOf('birim') >= 0 || allText2.indexOf('doktor') >= 0 ||
                                 allText2.indexOf('hekim') >= 0) score2 += 30;
