@@ -1164,19 +1164,19 @@ class HacettepeBot:
         return 1
 
 
-    def _search_and_select_first(self, page, search_text):
-        """Üstteki arama alanına yaz, dialog'dan tüm alternatifleri topla, ilkini seç.
+def _search_and_select_first(self, page, search_text):
+    """Üstteki arama alanına yaz, dialog'dan tüm alternatifleri topla, ilkini seç.
 
-        Returns:
-            (selected: bool, alternatives: list[str])
-        """
+    Returns:
+        (selected: bool, alternatives: list[str])
+    """
 
-        # ── Adım 1: "Birim veya Doktor ismi ile arama" metninin altındaki input'u bul ──
-        search_field = None
+    # ── Adım 1: "Birim veya Doktor ismi ile arama" metninin altındaki input'u bul ──
+    search_field = None
 
-        # JS ile label'e en yakın non-combo input'u bul ve data attribute ile işaretle
-        try:
-            found = page.evaluate("""() => {
+    # JS ile label'e en yakın non-combo input'u bul ve data attribute ile işaretle
+    try:
+        found = page.evaluate("""() => {
                 var walker = document.createTreeWalker(
                     document.body, NodeFilter.SHOW_TEXT, null);
                 var labelEl = null;
@@ -1214,196 +1214,195 @@ class HacettepeBot:
                 return false;
             }""")
 
-            if found:
-                search_field = page.locator('[data-hacbot-search="true"]').first
-                if search_field.count() == 0:
-                    search_field = None
-                else:
-                    print("  [ARAMA] Arama alanı JS ile bulundu.")
-        except Exception as e:
-            print(f"  [ARAMA] JS alan arama hatası: {e}")
-
-        # Fallback: label text ile parent üzerinden
-        if not search_field:
-            try:
-                label = page.get_by_text("Birim veya Doktor ismi ile arama")
-                if label.count() > 0:
-                    parent = label.locator("..")
-                    inp = parent.locator("vaadin-text-field, input").first
-                    if inp.count() > 0 and inp.is_visible():
-                        search_field = inp
-                        print("  [ARAMA] Arama alanı fallback ile bulundu.")
-            except Exception:
-                pass
-
-        if not search_field:
-            print("  [ARAMA] Arama alanı bulunamadı.")
-            self._screenshot(page, "debug-no-search-field")
-            return False, []
-
-        print(f"  [ARAMA] Arama alanı bulundu, yazılıyor: {search_text[:30]}...")
-        try:
-            tag = search_field.evaluate("el => el.tagName.toLowerCase()")
-            if tag == "vaadin-text-field":
-                target_input = search_field.locator("input").first
-                try:
-                    target_input.click(force=True, timeout=5000)
-                except Exception:
-                    target_input.evaluate("el => { el.focus(); el.click(); }")
+        if found:
+            search_field = page.locator('[data-hacbot-search="true"]').first
+            if search_field.count() == 0:
+                search_field = None
             else:
-                try:
-                    search_field.click(force=True, timeout=5000)
-                except Exception:
-                    search_field.evaluate("el => { el.focus(); el.click(); }")
-            human_delay(200, 400)
-            page.keyboard.press(SELECT_ALL_KEY)
-            page.keyboard.press("Backspace")
-            human_delay(100, 200)
-            page.keyboard.type(search_text, delay=60)
-            human_delay(1500, 3000)
-        except Exception as e:
-            print(f"  [ARAMA] Arama alanına yazılamadı: {e}")
-            return False, []
+                print("  [ARAMA] Arama alanı JS ile bulundu.")
+    except Exception as e:
+        print(f"  [ARAMA] JS alan arama hatası: {e}")
 
-        self._screenshot(page, "debug-after-search-type")
-
-        # ── Adım 2: Enter ile arama tetikle ──
+    # Fallback: label text ile parent üzerinden
+    if not search_field:
         try:
-            page.keyboard.press("Enter")
-            print("  [ARAMA] Enter ile arama tetiklendi.")
-            human_delay(2000, 4000)
+            label = page.get_by_text("Birim veya Doktor ismi ile arama")
+            if label.count() > 0:
+                parent = label.locator("..")
+                inp = parent.locator("vaadin-text-field, input").first
+                if inp.count() > 0 and inp.is_visible():
+                    search_field = inp
+                    print("  [ARAMA] Arama alanı fallback ile bulundu.")
         except Exception:
             pass
 
-        self._screenshot(page, "debug-after-search-submit")
+    if not search_field:
+        print("  [ARAMA] Arama alanı bulunamadı.")
+        self._screenshot(page, "debug-no-search-field")
+        return False, []
 
-        # ── Adım 3: Modal/dialog açıldıysa, içindeki arama alanına search_text yaz ──
-        dialog_found = False
-        try:
-            dialog = page.locator("vaadin-dialog-overlay")
-            if dialog.count() > 0 and dialog.first.is_visible():
-                dialog_found = True
-                print("  [ARAMA] Dialog/modal açıldı.")
-
-                dialog_input = None
-                for get_dinput in [
-                    lambda: dialog.first.locator('input[placeholder*="ara" i]').first,
-                    lambda: dialog.first.locator('input[placeholder*="search" i]').first,
-                    lambda: dialog.first.locator('input:not([type="hidden"])').first,
-                    lambda: dialog.first.locator('vaadin-text-field input').first,
-                ]:
-                    try:
-                        di = get_dinput()
-                        if di.count() > 0 and di.is_visible():
-                            dialog_input = di
-                            break
-                    except Exception:
-                        continue
-
-                if dialog_input:
-                    print(f"  [ARAMA] Dialog içi arama alanı bulundu, yazılıyor...")
-                    try:
-                        dialog_input.click(force=True, timeout=5000)
-                    except Exception:
-                        dialog_input.evaluate("el => { el.focus(); el.click(); }")
-                    
-                    human_delay(200, 400)
-                    dialog_input.fill("")
-                    page.keyboard.type(search_text[:20], delay=60)
-                    human_delay(1000, 2000)
-                    page.keyboard.press("Enter")
-                    human_delay(1500, 3000)
-
-                self._screenshot(page, "debug-dialog-search")
-        except Exception:
-            pass
-
-        # ── Adım 4: Tüm alternatifleri topla, sonra ilkini seç ──
-        alternatives = []
-        selected = False
-        first_item = None
-
-        result_selectors = [
-            'vaadin-grid-cell-content',
-            'vaadin-grid vaadin-grid-cell-content',
-            '[role="row"]',
-            '[role="option"]',
-            'tr',
-            'vaadin-item',
-            'vaadin-combo-box-item',
-            'div[class*="result"]',
-            'div[class*="item"]',
-            'span[class*="item"]',
-        ]
-
-        containers = []
-        if dialog_found:
+    print(f"  [ARAMA] Arama alanı bulundu, yazılıyor: {search_text[:30]}...")
+    try:
+        tag = search_field.evaluate("el => el.tagName.toLowerCase()")
+        if tag == "vaadin-text-field":
+            target_input = search_field.locator("input").first
             try:
-                containers.append(page.locator("vaadin-dialog-overlay").first)
+                target_input.click(force=True, timeout=5000)
             except Exception:
-                pass
-        containers.append(page)
+                target_input.evaluate("el => { el.focus(); el.click(); }")
+        else:
+            try:
+                search_field.click(force=True, timeout=5000)
+            except Exception:
+                search_field.evaluate("el => { el.focus(); el.click(); }")
+        human_delay(200, 400)
+        page.keyboard.press(SELECT_ALL_KEY)
+        page.keyboard.press("Backspace")
+        human_delay(100, 200)
+        page.keyboard.type(search_text, delay=60)
+        human_delay(1500, 3000)
+    except Exception as e:
+        print(f"  [ARAMA] Arama alanına yazılamadı: {e}")
+        return False, []
 
-        search_lower = search_text.lower().strip()
+    self._screenshot(page, "debug-after-search-type")
 
-        # Önce tüm eşleşen alternatifleri topla (tıklamadan)
-        for container in containers:
-            if alternatives:
-                break
-            for sel in result_selectors:
-                if alternatives:
-                    break
+    # ── Adım 2: Enter ile arama tetikle ──
+    try:
+        page.keyboard.press("Enter")
+        print("  [ARAMA] Enter ile arama tetiklendi.")
+        human_delay(2000, 4000)
+    except Exception:
+        pass
+
+    self._screenshot(page, "debug-after-search-submit")
+
+    # ── Adım 3: Modal/dialog açıldıysa, içindeki arama alanına search_text yaz ──
+    dialog_found = False
+    try:
+        dialog = page.locator("vaadin-dialog-overlay")
+        if dialog.count() > 0 and dialog.first.is_visible():
+            dialog_found = True
+            print("  [ARAMA] Dialog/modal açıldı.")
+
+            dialog_input = None
+            for get_dinput in [
+                lambda: dialog.first.locator('input[placeholder*="ara" i]').first,
+                lambda: dialog.first.locator('input[placeholder*="search" i]').first,
+                lambda: dialog.first.locator('input:not([type="hidden"])').first,
+                lambda: dialog.first.locator('vaadin-text-field input').first,
+            ]:
                 try:
-                    items = container.locator(sel).all()
-                    for item in items:
-                        try:
-                            txt = (item.text_content() or "").strip()
-                            if not txt or len(txt) < 3:
-                                continue
-                            txt_lower = txt.lower().strip()
-                            if txt_lower.startswith(search_lower) or \
-                               search_lower == txt_lower or \
-                               search_lower in txt_lower or \
-                               txt_lower.split(" - ")[0].strip() == search_lower:
-                                alternatives.append(txt)
-                                if first_item is None:
-                                    first_item = item
-                        except Exception:
-                            continue
+                    di = get_dinput()
+                    if di.count() > 0 and di.is_visible():
+                        dialog_input = di
+                        break
                 except Exception:
                     continue
 
-        if alternatives:
-            print(f"  [ARAMA] {len(alternatives)} alternatif bulundu: {[a[:40] for a in alternatives]}")
-
-        # İlk eşleşeni tıkla
-        if first_item is not None:
-            try:
-                print(f"  [ARAMA] İlk alternatif seçiliyor: {alternatives[0][:60]}")
+            if dialog_input:
+                print(f"  [ARAMA] Dialog içi arama alanı bulundu, yazılıyor...")
                 try:
-                    first_item.click(force=True, timeout=5000)
+                    dialog_input.click(force=True, timeout=5000)
                 except Exception:
-                    first_item.evaluate("el => el.click()")
-                selected = True
-                human_delay(500, 1000)
-            except Exception as e:
-                print(f"  [ARAMA] İlk alternatif tıklanamadı: {e}")
+                    dialog_input.evaluate("el => { el.focus(); el.click(); }")
 
-        if selected:
-            print("  [ARAMA] Sonuç seçildi!")
-            human_delay(1000, 2000)
+                human_delay(200, 400)
+                dialog_input.fill("")
+                page.keyboard.type(search_text[:20], delay=60)
+                human_delay(1000, 2000)
+                page.keyboard.press("Enter")
+                human_delay(1500, 3000)
+
+            self._screenshot(page, "debug-dialog-search")
+    except Exception:
+        pass
+
+    # ── Adım 4: Tüm alternatifleri topla, sonra ilkini seç ──
+    alternatives = []
+    selected = False
+    first_item = None
+
+    result_selectors = [
+        'vaadin-grid-cell-content',
+        'vaadin-grid vaadin-grid-cell-content',
+        '[role="row"]',
+        '[role="option"]',
+        'tr',
+        'vaadin-item',
+        'vaadin-combo-box-item',
+        'div[class*="result"]',
+        'div[class*="item"]',
+        'span[class*="item"]',
+    ]
+
+    containers = []
+    if dialog_found:
+        try:
+            containers.append(page.locator("vaadin-dialog-overlay").first)
+        except Exception:
+            pass
+    containers.append(page)
+
+    search_lower = search_text.lower().strip()
+
+    # Önce tüm eşleşen alternatifleri topla (tıklamadan)
+    for container in containers:
+        if alternatives:
+            break
+        for sel in result_selectors:
+            if alternatives:
+                break
             try:
-                page.locator("vaadin-dialog-overlay").wait_for(
-                    state="detached", timeout=5000
-                )
+                items = container.locator(sel).all()
+                for item in items:
+                    try:
+                        txt = (item.text_content() or "").strip()
+                        if not txt or len(txt) < 3:
+                            continue
+                        txt_lower = txt.lower().strip()
+                        if txt_lower.startswith(search_lower) or \
+                                search_lower == txt_lower or \
+                                search_lower in txt_lower or \
+                                txt_lower.split(" - ")[0].strip() == search_lower:
+                            alternatives.append(txt)
+                            if first_item is None:
+                                first_item = item
+                    except Exception:
+                        continue
             except Exception:
-                pass
-        else:
-            print("  [ARAMA] Sonuçlardan eşleşen bulunamadı.")
-            self._screenshot(page, "debug-no-match")
+                continue
 
-        return selected, alternatives
+    if alternatives:
+        print(f"  [ARAMA] {len(alternatives)} alternatif bulundu: {[a[:40] for a in alternatives]}")
 
+    # İlk eşleşeni tıkla
+    if first_item is not None:
+        try:
+            print(f"  [ARAMA] İlk alternatif seçiliyor: {alternatives[0][:60]}")
+            try:
+                first_item.click(force=True, timeout=5000)
+            except Exception:
+                first_item.evaluate("el => el.click()")
+            selected = True
+            human_delay(500, 1000)
+        except Exception as e:
+            print(f"  [ARAMA] İlk alternatif tıklanamadı: {e}")
+
+    if selected:
+        print("  [ARAMA] Sonuç seçildi!")
+        human_delay(1000, 2000)
+        try:
+            page.locator("vaadin-dialog-overlay").wait_for(
+                state="detached", timeout=5000
+            )
+        except Exception:
+            pass
+    else:
+        print("  [ARAMA] Sonuçlardan eşleşen bulunamadı.")
+        self._screenshot(page, "debug-no-match")
+
+    return selected, alternatives
     # ── Scoped combo okuma helper ──
 
     def _read_combo_items(self, page, combo, max_items=50):
